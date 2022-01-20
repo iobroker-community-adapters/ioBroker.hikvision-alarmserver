@@ -109,7 +109,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         });
 
         // Set it true (event in progress)
-        await this.setStateAsync(id, true, true);
+        await this.setStateChangedAsync(id, true, true);
 
         // ... and restart to clear (set false) after 5s
         this.timers[id] = this.setTimeout(() => {
