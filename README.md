@@ -41,7 +41,7 @@ Make sure to linkage in the events you would like to report to ioBroker includes
 
 ## Changelog
 
-### 0.0.1
+### 0.0.2
 * (Robin Rainton) initial release.
 
 ## License
