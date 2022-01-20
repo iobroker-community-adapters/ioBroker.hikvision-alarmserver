@@ -1,0 +1,81 @@
+{
+    "common": {
+        "name": "hikvision-alarmserver",
+        "version": "0.0.1",
+        "news": {
+            "0.0.1": {
+                "en": "initial release",
+                "de": "Erstveröffentlichung",
+                "ru": "Начальная версия",
+                "pt": "lançamento inicial",
+                "nl": "Eerste uitgave",
+                "fr": "Première version",
+                "it": "Versione iniziale",
+                "es": "Versión inicial",
+                "pl": "Pierwsze wydanie",
+                "zh-cn": "首次出版"
+            }
+        },
+        "title": "Hikvision Alarm Server",
+        "titleLang": {
+            "en": "Hikvision Alarm Server",
+            "de": "Hikvision-Alarmserver",
+            "ru": "Сервер сигнализации Hikvision",
+            "pt": "Servidor de alarme Hikvision",
+            "nl": "Hikvision Alarm Server",
+            "fr": "Serveur d'alarme Hikvision",
+            "it": "Server di allarme Hikvision",
+            "es": "Servidor de alarma Hikvision",
+            "pl": "Serwer alarmowy Hikvision",
+            "zh-cn": "海康威视报警服务器"
+        },
+        "desc": {
+            "en": "An adapter to receive alarms/events send from Hikvision cameras.",
+            "de": "Ein Adapter zum Empfangen von Alarmen/Ereignissen, die von Hikvision-Kameras gesendet werden.",
+            "ru": "Адаптер для приема сигналов тревоги/событий, отправляемых с камер Hikvision.",
+            "pt": "Um adaptador para receber alarmes/eventos enviados de câmeras Hikvision.",
+            "nl": "Een adapter om alarmen/gebeurtenissen van Hikvision camera's te ontvangen.",
+            "fr": "Un adaptateur pour recevoir les alarmes/événements envoyés par les caméras Hikvision.",
+            "it": "Un adattatore per ricevere allarmi/eventi inviati dalle telecamere Hikvision.",
+            "es": "Un adaptador para recibir alarmas/eventos enviados desde cámaras Hikvision.",
+            "pl": "Adapter do odbierania alarmów/zdarzeń wysyłanych z kamer Hikvision.",
+            "zh-cn": "接收从海康威视摄像机发送的警报/事件的适配器。"
+        },
+        "authors": [
+            "Robin Rainton <robin@rainton.com>"
+        ],
+        "keywords": [
+            "hikvision",
+            "camera",
+            "alarm",
+            "event",
+            "alert",
+            "security"
+        ],
+        "license": "MIT",
+        "platform": "Javascript/Node.js",
+        "main": "main.js",
+        "icon": "hikvision-alarmserver.png",
+        "enabled": true,
+        "extIcon": "https://raw.githubusercontent.com/raintonr/ioBroker.hikvision-alarmserver/main/admin/hikvision-alarmserver.png",
+        "readme": "https://github.com/raintonr/ioBroker.hikvision-alarmserver/blob/main/README.md",
+        "loglevel": "info",
+        "mode": "daemon",
+        "type": "alarm",
+        "compact": true,
+        "connectionType": "local",
+        "dataSource": "push",
+        "materialize": true,
+        "dependencies": [
+            {
+                "js-controller": ">=2.0.0"
+            }
+        ]
+    },
+    "native": {
+        "option1": true,
+        "option2": "42"
+    },
+    "objects": [],
+    "instanceObjects": []
+}
