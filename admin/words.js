@@ -14,28 +14,16 @@ systemDictionary = {
         'pl': 'Ustawienia adaptera dla hikvision-alarmserver',
         'zh-cn': 'hikvision-alarmserver的适配器设置'
     },
-    'option1': {
-        'en': 'option1',
-        'de': 'Option 1',
-        'ru': 'Опция 1',
-        'pt': 'Opção 1',
-        'nl': 'Optie 1',
-        'fr': 'Option 1',
-        'it': 'opzione 1',
-        'es': 'Opción 1',
-        'pl': 'opcja 1',
-        'zh-cn': '选项1'
-    },
-    'option2': {
-        'en': 'option2',
-        'de': 'Option 2',
-        'ru': 'вариант 2',
-        'pt': 'opção 2',
-        'nl': 'Optie 2',
-        'fr': 'Option 2',
-        'it': 'opzione 2',
-        'es': 'opcion 2',
-        'pl': 'Opcja 2',
-        'zh-cn': '选项2'
+    'port': {
+        'en': 'port',
+        'de': 'Hafen',
+        'ru': 'порт',
+        'pt': 'porta',
+        'nl': 'haven',
+        'fr': 'Port',
+        'it': 'porta',
+        'es': 'Puerto',
+        'pl': 'Port',
+        'zh-cn': '港口'
     }
 };
