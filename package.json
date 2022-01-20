@@ -21,7 +21,9 @@
     "url": "https://github.com/raintonr/ioBroker.hikvision-alarmserver"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^2.5.1"
+    "http": "*",
+    "@iobroker/adapter-core": "^2.5.1",
+    "xml2js" : "*"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^2.2.2",
