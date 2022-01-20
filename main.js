@@ -33,29 +33,39 @@ class HikvisionAlarmserver extends utils.Adapter {
      */
     async onReady() {
         const that = this;
-        this.server = http.createServer(function (request, response) {
-            if (request.method == 'POST') {
-                let body = '';
-                request.on('data', function (data) {
-                    body += data;
-                });
-                request.on('end', function () {
-                    that.log.debug(body);
-                    parseString(body, function (err, xml) {
-                        if (err) {
-                            that.log.error('Error parsing body: ' + err);
-                        } else {
-                            that.logEvent(xml.EventNotificationAlert);
-                        }
+        try {
+            this.server = http.createServer(function (request, response) {
+                if (request.method == 'POST') {
+                    let body = '';
+                    request.on('data', function (data) {
+                        body += data;
                     });
+                    request.on('end', function () {
+                        that.log.debug(body);
+                        parseString(body, function (err, xml) {
+                            if (err) {
+                                that.log.error('Error parsing body: ' + err);
+                            } else {
+                                that.logEvent(xml);
+                            }
+                        });
 
-                });
-            }
-            response.end();
-        });
+                    });
+                }
+                response.end();
+            });
 
-        this.server.listen(this.config.port);
-        this.log.info('Server listening on port ' + this.config.port);
+            this.server.on('error', function (err) {
+                that.log.error('HTTP server error: ' + err);
+                that.terminate();
+            });
+
+            this.log.info('Server starting to listen on port ' + this.config.port);
+            this.server.listen(this.config.port);
+        } catch (err) {
+            this.log.error('Caught error in HTTP server: ' + err);
+            that.terminate();
+        }
     }
 
     /**
@@ -83,30 +93,43 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
     }
 
-    async logEvent(event) {
-        /* TODO: make object names configurable? Mac? IP? etc. */
-        const deviceId = event.macAddress;
-        const eventType = event.eventType;
+    async logEvent(xml) {
+        let deviceId = null;
+        let eventType = null;
+        try {
+            /* This is inside a try...catch so we handle case when XML was bad */
+            /* TODO: make object names configurable? Mac? IP? etc. */
+            deviceId = xml.EventNotificationAlert.macAddress;
+            eventType = xml.EventNotificationAlert.eventType;
+        } catch (err) {
+            this.log.error('Bad request - failed to find required XML attributes');
+            return;
+        }
         const id = deviceId + '.' + eventType;
 
         // Cancel any existing timer for this state
-        if (id in this.timers && this.timers[id]) {
-            this.clearTimeout(this.timers[id]);
-            this.timers[id] = null;
+        if (id in this.timers) {
+            if (this.timers[id]) {
+                this.clearTimeout(this.timers[id]);
+                this.timers[id] = null;
+            }
+        } else {
+            // Create state if not there...
+            // ... which will only be attempted if not in timers as if this ID is in the
+            // timers object we must have already seen it and created the state.
+            this.log.debug('Creating state ' + id);
+            await this.setObjectNotExistsAsync(id, {
+                type: 'state',
+                common: {
+                    name: eventType,
+                    type: 'boolean',
+                    role: 'indicator',
+                    read: true,
+                    write: true,
+                },
+                native: {},
+            });
         }
-
-        // Create state if not there
-        await this.setObjectNotExistsAsync(id, {
-            type: 'state',
-            common: {
-                name: eventType,
-                type: 'boolean',
-                role: 'indicator',
-                read: true,
-                write: true,
-            },
-            native: {},
-        });
 
         // Set it true (event in progress)
         await this.setStateChangedAsync(id, true, true);
