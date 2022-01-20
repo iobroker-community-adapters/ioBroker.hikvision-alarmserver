@@ -25,7 +25,7 @@ It appears that cameras repeatedly issue events every second when those events a
 
 ## Configuration
 
-### ioBrokerthese
+### ioBroker
 
 In the adapter configuration, select a free port for the adapter to listen on (8089 by default).
 
