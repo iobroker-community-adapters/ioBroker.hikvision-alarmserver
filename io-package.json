@@ -1,9 +1,9 @@
 {
     "common": {
         "name": "hikvision-alarmserver",
-        "version": "0.0.1",
+        "version": "0.0.3",
         "news": {
-            "0.0.1": {
+            "0.0.3": {
                 "en": "initial release",
                 "de": "Erstveröffentlichung",
                 "ru": "Начальная версия",
