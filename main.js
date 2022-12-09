@@ -105,7 +105,8 @@ class HikvisionAlarmserver extends utils.Adapter {
             this.log.error('Bad request - failed to find required XML attributes');
             return;
         }
-        const id = deviceId + '.' + eventType;
+        // Strip colons from ID to be consistent with net-tools
+        const id = String(deviceId).replace(/:/g, '') + '.' + eventType;
 
         // Cancel any existing timer for this state
         if (id in this.timers) {
