@@ -46,10 +46,10 @@ Make sure to linkage in the events you would like to report to ioBroker includes
   ### **WORK IN PROGRESS**
 -->
 
-## **WORK IN PROGRESS**
+### **WORK IN PROGRESS**
 -   (Robin Rainton) Drop colons from device IDs.
 
-## 0.0.2
+### 0.0.2
 -   (Robin Rainton) initial release.
 
 ## License
