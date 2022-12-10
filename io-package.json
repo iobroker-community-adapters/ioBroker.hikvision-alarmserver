@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "hikvision-alarmserver",
-        "version": "0.0.3",
+        "version": "0.0.5",
         "news": {
+            "0.0.5": {
+                "en": "Drop colons from device IDs.",
+                "de": "Fallen Sie Kolonen aus Geräte-IDs.",
+                "ru": "Дорожные колонки с ID устройства.",
+                "pt": "Solte os pontos de identificação do dispositivo.",
+                "nl": "Laat kolonels vallen van apparaat ID's.",
+                "fr": "Lâchez les colons de l'appareil.",
+                "it": "Getta i punti dagli ID del dispositivo.",
+                "es": "Dejar los colones de las identificaciones de dispositivos.",
+                "pl": "Kolonie z urządzenia ID.",
+                "uk": "Поверніть колонки від ідентифікаторів пристрою.",
+                "zh-cn": "来自装置开发的人类慈善团体。."
+            },
             "0.0.3": {
                 "en": "initial release",
                 "de": "Erstveröffentlichung",

@@ -46,7 +46,7 @@ Make sure to linkage in the events you would like to report to ioBroker includes
   ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.0.5 (2022-12-10)
 -   (Robin Rainton) Drop colons from device IDs.
 
 ### 0.0.2
