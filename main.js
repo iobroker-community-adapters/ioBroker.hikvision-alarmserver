@@ -7,7 +7,6 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
-
 const http = require('http');
 const parseString = require('xml2js').parseString;
 
@@ -36,21 +35,41 @@ class HikvisionAlarmserver extends utils.Adapter {
         try {
             this.server = http.createServer(function (request, response) {
                 if (request.method == 'POST') {
-                    let body = '';
+                    that.log.debug('Request headers: ' + JSON.stringify(request.headers));
+
+                    const chunks = [];
                     request.on('data', function (data) {
-                        body += data;
+                        chunks.push(data);
                     });
                     request.on('end', function () {
-                        that.log.debug(body);
-                        parseString(body, function (err, xml) {
-                            if (err) {
-                                that.log.error('Error parsing body: ' + err);
-                            } else {
-                                that.logEvent(xml);
-                            }
-                        });
+                        const body = chunks.concat();
+                        const contentType = request.headers['content-type'];
+                        that.log.debug(body.toString());
 
+                        let xmlString;
+                        if (!contentType) {
+                            that.log.error('No content-type in header!');
+                        } else if (contentType.startsWith('application/xml')) {
+                            // Payload was pure XML
+                            xmlString = body.toString();
+                        } else {
+                            that.log.error('Unhandled content-type: ' + contentType);
+                        }
+
+                        if (xmlString) {
+                            parseString(xmlString, function (err, xmlObj) {
+                                if (err) {
+                                    that.log.error('Error parsing body: ' + err);
+                                } else {
+                                    that.logEvent(xmlObj);
+                                }
+                            });
+                        } else {
+                            that.log.error('Could not find XML message in payload');
+                        }
                     });
+                } else {
+                    that.log.warn('Received non-POST request - ignoring');
                 }
                 response.end();
             });
