@@ -124,7 +124,11 @@ class HikvisionAlarmserver extends utils.Adapter {
 
                     const bodyParts = multipart.parse(body, boundary);
                     this.log.debug(JSON.stringify(bodyParts));
-                    xmlString = bodyParts[0];
+                    if (bodyParts.length) {
+                        xmlString = bodyParts[0].data;
+                    } else {
+                        this.log.error('Failed to decode multipart payload (' + boundary +'): ' + body.toString());
+                    }
                 } else {
                     this.log.error('No boundary found in multipart header: ' + request.headers['content-type']);
                 }
