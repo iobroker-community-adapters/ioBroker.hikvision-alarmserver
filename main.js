@@ -122,7 +122,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                     boundary = boundary[1];
                     this.log.debug('boundary: ' + boundary);
 
-                    const bodyParts = multipart.parse(body.toString(), boundary);
+                    const bodyParts = multipart.parse(body, boundary);
                     this.log.debug(JSON.stringify(bodyParts));
                     xmlString = bodyParts[0];
                 } else {
