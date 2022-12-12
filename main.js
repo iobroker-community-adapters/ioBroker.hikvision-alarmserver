@@ -8,7 +8,15 @@
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
 const http = require('http');
-const parseString = require('xml2js').parseString;
+const multipart = require('parse-multipart-data');
+
+// TODO: awaiting release
+// const parseStringPromise = require('xml2js').parseStringPromise;
+
+// TODO: Workaround for https://github.com/Leonidas-from-XIV/node-xml2js/issues/601
+const promisify = require('util').promisify;
+const xml2js = require('xml2js');
+const parseStringPromise = promisify(xml2js.parseString);
 
 class HikvisionAlarmserver extends utils.Adapter {
 
@@ -41,31 +49,11 @@ class HikvisionAlarmserver extends utils.Adapter {
                     request.on('data', function (data) {
                         chunks.push(data);
                     });
-                    request.on('end', function () {
-                        const body = chunks.concat();
-                        const contentType = request.headers['content-type'];
-                        that.log.debug(body.toString());
+                    request.on('end', async function () {
+                        const xmlObj = await that.decodePayload(request, chunks);
 
-                        let xmlString;
-                        if (!contentType) {
-                            that.log.error('No content-type in header!');
-                        } else if (contentType.startsWith('application/xml')) {
-                            // Payload was pure XML
-                            xmlString = body.toString();
-                        } else {
-                            that.log.error('Unhandled content-type: ' + contentType);
-                        }
-
-                        if (xmlString) {
-                            parseString(xmlString, function (err, xmlObj) {
-                                if (err) {
-                                    that.log.error('Error parsing body: ' + err);
-                                } else {
-                                    that.logEvent(xmlObj);
-                                }
-                            });
-                        } else {
-                            that.log.error('Could not find XML message in payload');
+                        if (xmlObj) {
+                            that.logEvent(xmlObj);
                         }
                     });
                 } else {
@@ -110,6 +98,52 @@ class HikvisionAlarmserver extends utils.Adapter {
         } catch (e) {
             callback();
         }
+    }
+
+    async decodePayload(request, chunks) {
+        const body = chunks.concat();
+        this.log.debug(body.toString());
+
+        let xmlObj = null;
+
+        if (!('content-type' in request.headers)) {
+            this.log.error('No content-type in header!');
+        } else {
+            let xmlString = null;
+            const contentTypeParts = request.headers['content-type'].split(';');
+
+            if (contentTypeParts[0] == 'application/xml') {
+                // Payload was pure XML
+                xmlString = body.toString();
+            } else if (contentTypeParts[0] == 'multipart/form-data') {
+                const boundaryRe = new RegExp(' boundary=(.*)');
+                let boundary = request.headers['content-type'].match(boundaryRe);
+                if (boundary && boundary.length) {
+                    boundary = boundary[1];
+                    this.log.debug('boundary: ' + boundary);
+
+                    const bodyParts = multipart.parse(body.toString(), boundary);
+                    this.log.debug(JSON.stringify(bodyParts));
+                    xmlString = bodyParts[0];
+                } else {
+                    this.log.error('No boundary found in multipart header: ' + request.headers['content-type']);
+                }
+            } else {
+                this.log.error('Unhandled content-type: ' + request.headers['content-type']);
+            }
+
+            if (xmlString) {
+                try {
+                    xmlObj = await parseStringPromise(xmlString);
+                } catch (err) {
+                    this.log.error('Error parsing body: ' + err);
+                }
+            } else {
+                this.log.error('Could not find XML message in payload');
+            }
+        }
+
+        return xmlObj;
     }
 
     async logEvent(xml) {
