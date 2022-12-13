@@ -44,12 +44,12 @@ class HikvisionAlarmserver extends utils.Adapter {
                 if (request.method == 'POST') {
                     that.log.debug('Request headers: ' + JSON.stringify(request.headers));
 
-                    const chunks = [];
+                    let body = '';
                     request.on('data', function (data) {
-                        chunks.push(data);
+                        body += data;
                     });
                     request.on('end', async function () {
-                        const xmlObj = await that.decodePayload(request, chunks);
+                        const xmlObj = await that.decodePayload(request, body);
 
                         if (xmlObj) {
                             that.logEvent(xmlObj);
@@ -99,9 +99,8 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
     }
 
-    async decodePayload(request, chunks) {
-        const body = Buffer.concat(chunks);
-        this.log.debug(body.toString());
+    async decodePayload(request, body) {
+        this.log.debug(body);
 
         let xmlObj = null;
 
@@ -113,7 +112,7 @@ class HikvisionAlarmserver extends utils.Adapter {
 
             if (contentTypeParts[0] == 'application/xml') {
                 // Payload was pure XML
-                xmlString = body.toString();
+                xmlString = body;
             } else if (contentTypeParts[0] == 'multipart/form-data') {
                 const boundaryRe = new RegExp(' boundary=(.*)');
                 const boundaryMatches = request.headers['content-type'].match(boundaryRe);
@@ -123,11 +122,11 @@ class HikvisionAlarmserver extends utils.Adapter {
                     // Couldn't get parse-multipart-data to work. Possible TODO: use that.
                     // In the mean time, just pull out with a regexp
                     const xmlRe = new RegExp(`--${boundary}.*Content-Length:\\s*\\d{1,}\\s*(<\\?xml.*)--${boundary}--`, 's');
-                    const xmlMatches = body.toString().match(xmlRe);
+                    const xmlMatches = body.match(xmlRe);
                     if (xmlMatches && xmlMatches.length) {
                         xmlString = xmlMatches[1];
                     } else {
-                        this.log.error('Failed to extract XML from multipart payload (' + boundary + '): ' + body.toString());
+                        this.log.error('Failed to extract XML from multipart payload (' + boundary + '): ' + body);
                     }
                 } else {
                     this.log.error('No boundary found in multipart header: ' + request.headers['content-type']);
