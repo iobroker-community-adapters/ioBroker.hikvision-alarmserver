@@ -15,7 +15,14 @@
 
 An adapter to receive alarms/events sent from Hikvision cameras.
 
-Tested with basic & smart events on Hikvision DS-2CD2143G2-I. Success/failure/bug reports welcome.
+Tested with Hikvision models:
+
+- DS-2CD2043G2-I
+- DS-2CD2143G2-I
+- DS-2DE2A404IW-DE3
+- DS-2DE3A404IW-DE/W
+
+Success/failure/bug reports welcomed if you have a model not in this list.
 
 ## Usage
 
