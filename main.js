@@ -100,7 +100,7 @@ class HikvisionAlarmserver extends utils.Adapter {
     }
 
     async decodePayload(request, chunks) {
-        const body = chunks.concat();
+        const body = Buffer.concat(chunks);
         this.log.debug(body.toString());
 
         let xmlObj = null;
