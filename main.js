@@ -7,9 +7,15 @@
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
-
 const http = require('http');
-const parseString = require('xml2js').parseString;
+
+// TODO: awaiting release
+// const parseStringPromise = require('xml2js').parseStringPromise;
+
+// TODO: Workaround for https://github.com/Leonidas-from-XIV/node-xml2js/issues/601
+const promisify = require('util').promisify;
+const xml2js = require('xml2js');
+const parseStringPromise = promisify(xml2js.parseString);
 
 class HikvisionAlarmserver extends utils.Adapter {
 
@@ -36,21 +42,21 @@ class HikvisionAlarmserver extends utils.Adapter {
         try {
             this.server = http.createServer(function (request, response) {
                 if (request.method == 'POST') {
+                    that.log.debug('Request headers: ' + JSON.stringify(request.headers));
+
                     let body = '';
                     request.on('data', function (data) {
                         body += data;
                     });
-                    request.on('end', function () {
-                        that.log.debug(body);
-                        parseString(body, function (err, xml) {
-                            if (err) {
-                                that.log.error('Error parsing body: ' + err);
-                            } else {
-                                that.logEvent(xml);
-                            }
-                        });
+                    request.on('end', async function () {
+                        const xmlObj = await that.decodePayload(request, body);
 
+                        if (xmlObj) {
+                            that.logEvent(xmlObj);
+                        }
                     });
+                } else {
+                    that.log.warn('Received non-POST request - ignoring');
                 }
                 response.end();
             });
@@ -91,6 +97,59 @@ class HikvisionAlarmserver extends utils.Adapter {
         } catch (e) {
             callback();
         }
+    }
+
+    async decodePayload(request, body) {
+        this.log.debug(body);
+
+        let xmlObj = null;
+
+        if (!('content-type' in request.headers)) {
+            this.log.error('No content-type in header!');
+        } else {
+            let xmlString = null;
+            const contentTypeParts = request.headers['content-type'].split(';');
+
+            if (contentTypeParts[0] == 'application/xml') {
+                // Payload was pure XML
+                xmlString = body;
+            } else if (contentTypeParts[0] == 'multipart/form-data') {
+                const boundaryRe = new RegExp(' boundary=(.*)');
+                const boundaryMatches = request.headers['content-type'].match(boundaryRe);
+                if (boundaryMatches && boundaryMatches.length) {
+                    const boundary = boundaryMatches[1];
+
+                    // Couldn't get parse-multipart-data to work. Possible TODO: use that.
+                    // In the mean time, just pull out with a regexp
+                    const xmlRe = new RegExp(`--${boundary}.*Content-Length:\\s*\\d{1,}\\s*(<\\?xml.*)--${boundary}--`, 's');
+                    const xmlMatches = body.match(xmlRe);
+                    if (xmlMatches && xmlMatches.length) {
+                        xmlString = xmlMatches[1];
+                    } else {
+                        this.log.error('Failed to extract XML from multipart payload (' + boundary + '): ' + body);
+                    }
+                } else {
+                    this.log.error('No boundary found in multipart header: ' + request.headers['content-type']);
+                }
+            } else {
+                this.log.error('Unhandled content-type: ' + request.headers['content-type']);
+            }
+
+            if (xmlString) {
+                try {
+                    xmlObj = await parseStringPromise(xmlString);
+                    if (!xmlObj) {
+                        this.log.error('Parse returned null XML');
+                    }
+                } catch (err) {
+                    this.log.error('Error parsing body: ' + err);
+                }
+            } else {
+                this.log.error('Could not find XML message in payload');
+            }
+        }
+
+        return xmlObj;
     }
 
     async logEvent(xml) {
