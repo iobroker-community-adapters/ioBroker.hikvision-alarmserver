@@ -121,7 +121,7 @@ class HikvisionAlarmserver extends utils.Adapter {
 
                     // Couldn't get parse-multipart-data to work. Possible TODO: use that.
                     // In the mean time, just pull out with a regexp
-                    const xmlRe = new RegExp(`--${boundary}.*Content-Length:\\s*\\d{1,}\\s*(<\\?xml.*)--${boundary}--`, 's');
+                    const xmlRe = new RegExp(`--${boundary}.*Content-Length:\\s*\\d{1,}\\s*(<.*)--${boundary}--`, 's');
                     const xmlMatches = body.match(xmlRe);
                     if (xmlMatches && xmlMatches.length) {
                         xmlString = xmlMatches[1];
