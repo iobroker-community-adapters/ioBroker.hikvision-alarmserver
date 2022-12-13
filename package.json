@@ -23,8 +23,7 @@
   "dependencies": {
     "http": "*",
     "@iobroker/adapter-core": "^2.5.1",
-    "xml2js": "*",
-    "parse-multipart-data": "*"
+    "xml2js": "*"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^2.2.2",

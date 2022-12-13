@@ -8,7 +8,6 @@
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
 const http = require('http');
-const multipart = require('parse-multipart-data');
 
 // TODO: awaiting release
 // const parseStringPromise = require('xml2js').parseStringPromise;
@@ -117,17 +116,18 @@ class HikvisionAlarmserver extends utils.Adapter {
                 xmlString = body.toString();
             } else if (contentTypeParts[0] == 'multipart/form-data') {
                 const boundaryRe = new RegExp(' boundary=(.*)');
-                let boundary = request.headers['content-type'].match(boundaryRe);
-                if (boundary && boundary.length) {
-                    boundary = boundary[1];
-                    this.log.debug('boundary: ' + boundary);
+                const boundaryMatches = request.headers['content-type'].match(boundaryRe);
+                if (boundaryMatches && boundaryMatches.length) {
+                    const boundary = boundaryMatches[1];
 
-                    const bodyParts = multipart.parse(body, boundary);
-                    this.log.debug(JSON.stringify(bodyParts));
-                    if (bodyParts.length) {
-                        xmlString = bodyParts[0].data;
+                    // Couldn't get parse-multipart-data to work. Possible TODO: use that.
+                    // In the mean time, just pull out with a regexp
+                    const xmlRe = new RegExp(`--${boundary}.*Content-Length:\\s*\\d{1,}\\s*(<\\?xml.*)--${boundary}--`, 's');
+                    const xmlMatches = body.toString().match(xmlRe);
+                    if (xmlMatches && xmlMatches.length) {
+                        xmlString = xmlMatches[1];
                     } else {
-                        this.log.error('Failed to decode multipart payload (' + boundary +'): ' + body.toString());
+                        this.log.error('Failed to extract XML from multipart payload (' + boundary + '): ' + body.toString());
                     }
                 } else {
                     this.log.error('No boundary found in multipart header: ' + request.headers['content-type']);
@@ -139,6 +139,9 @@ class HikvisionAlarmserver extends utils.Adapter {
             if (xmlString) {
                 try {
                     xmlObj = await parseStringPromise(xmlString);
+                    if (!xmlObj) {
+                        this.log.error('Parse returned null XML');
+                    }
                 } catch (err) {
                     this.log.error('Error parsing body: ' + err);
                 }
