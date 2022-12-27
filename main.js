@@ -166,7 +166,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
 
         // Channel name is optional
-        const channelName = xml.EventNotificationAlert.hasOwnProperty('channelName') ?
+        const channelName = this.config.useChannels && xml.EventNotificationAlert.hasOwnProperty('channelName') ?
             xml.EventNotificationAlert.channelName[0] : null;
 
         // Strip colons from ID to be consistent with net-tools

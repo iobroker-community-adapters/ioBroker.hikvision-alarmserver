@@ -99,7 +99,8 @@
         ]
     },
     "native": {
-        "port": 8089
+        "port": 8089,
+        "useChannels": false
     },
     "objects": [],
     "instanceObjects": []
