@@ -153,52 +153,101 @@ class HikvisionAlarmserver extends utils.Adapter {
     }
 
     async logEvent(xml) {
-        let deviceId = null;
+        let macAddress = null;
         let eventType = null;
         try {
-            /* This is inside a try...catch so we handle case when XML was bad */
-            /* TODO: make object names configurable? Mac? IP? etc. */
-            deviceId = xml.EventNotificationAlert.macAddress;
-            eventType = xml.EventNotificationAlert.eventType;
+            // This is inside a try...catch so we handle case when XML was bad.
+            // TODO: make object names configurable? Mac? IP? etc.
+            macAddress = xml.EventNotificationAlert.macAddress[0];
+            eventType = xml.EventNotificationAlert.eventType[0];
         } catch (err) {
             this.log.error('Bad request - failed to find required XML attributes');
             return;
         }
+
+        // Channel name is optional
+        const channelName = xml.EventNotificationAlert.hasOwnProperty('channelName') ?
+            xml.EventNotificationAlert.channelName[0] : null;
+
         // Strip colons from ID to be consistent with net-tools
-        const id = String(deviceId).replace(/:/g, '') + '.' + eventType;
+        const device = String(macAddress).replace(/:/g, '');
+        const stateId = device +
+            (channelName != null ? '.' + channelName : '') +
+            ('.' + eventType);
 
         // Cancel any existing timer for this state
-        if (id in this.timers) {
-            if (this.timers[id]) {
-                this.clearTimeout(this.timers[id]);
-                this.timers[id] = null;
+        if (stateId in this.timers) {
+            if (this.timers[stateId]) {
+                this.clearTimeout(this.timers[stateId]);
+                this.timers[stateId] = null;
             }
         } else {
-            // Create state if not there...
+            // Create device/channels/state if not there...
             // ... which will only be attempted if not in timers as if this ID is in the
             // timers object we must have already seen it and created the state.
-            this.log.debug('Creating state ' + id);
-            await this.setObjectNotExistsAsync(id, {
+
+            this.log.debug('Creating device ' + device);
+            const native = {
+                mac: macAddress
+            };
+            // Add optional parts
+            if (xml.EventNotificationAlert.hasOwnProperty('ipAddress')) {
+                native.ipAddress = xml.EventNotificationAlert.ipAddress[0];
+            }
+            if (xml.EventNotificationAlert.hasOwnProperty('serialNumber')) {
+                native.serialNumber = xml.EventNotificationAlert.serialNumber[0];
+            }
+            await this.setObjectNotExistsAsync(device, {
+                type: 'device',
+                common: {
+                    name: await this.getDeviceName(device)
+                },
+                native: native
+            });
+
+            if (channelName != null) {
+                this.log.debug('Creating channel ' + channelName);
+                await this.createChannelAsync(device, channelName);
+            }
+
+            this.log.debug('Creating state ' + stateId);
+            await this.setObjectNotExistsAsync(stateId, {
                 type: 'state',
                 common: {
                     name: eventType,
                     type: 'boolean',
                     role: 'indicator',
                     read: true,
-                    write: true,
+                    write: false,
                 },
                 native: {},
             });
         }
 
         // Set it true (event in progress)
-        await this.setStateChangedAsync(id, true, true);
+        await this.setStateChangedAsync(stateId, true, true);
 
         // ... and restart to clear (set false) after 5s
-        this.timers[id] = this.setTimeout(() => {
-            this.setState(id, false, true);
-            this.timers[id] = null;
+        this.timers[stateId] = this.setTimeout(() => {
+            this.setState(stateId, false, true);
+            this.timers[stateId] = null;
         }, 5000 /* TODO: make timeout option? */);
+    }
+
+    async getDeviceName(device) {
+        // Output is same as input by default
+        let output = device;
+
+        const devices = await this.getForeignObjectsAsync('net-tools.*.' + device, 'device');
+        if (Object.keys(devices).length == 1) {
+            // As expected, return the device name...
+            const device = devices[Object.keys(devices)[0]];
+            if (device && device.common && device.common.name) {
+                // ... which should always be here.
+                output = device.common.name;
+            }
+        }
+        return output;
     }
 }
 
