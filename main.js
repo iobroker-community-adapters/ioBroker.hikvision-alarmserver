@@ -166,7 +166,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
 
         // Channel name is optional
-        const channelName = this.config.useChannels && xml.EventNotificationAlert.hasOwnProperty('channelName') ?
+        const channelName = this.config.useChannels && xml.EventNotificationAlert?.channelName ?
             xml.EventNotificationAlert.channelName[0] : null;
 
         // Strip colons from ID to be consistent with net-tools
@@ -191,11 +191,8 @@ class HikvisionAlarmserver extends utils.Adapter {
                 mac: macAddress
             };
             // Add optional parts
-            if (xml.EventNotificationAlert.hasOwnProperty('ipAddress')) {
+            if (xml.EventNotificationAlert?.ipAddress) {
                 native.ipAddress = xml.EventNotificationAlert.ipAddress[0];
-            }
-            if (xml.EventNotificationAlert.hasOwnProperty('serialNumber')) {
-                native.serialNumber = xml.EventNotificationAlert.serialNumber[0];
             }
             await this.setObjectNotExistsAsync(device, {
                 type: 'device',
