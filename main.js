@@ -66,8 +66,8 @@ class HikvisionAlarmserver extends utils.Adapter {
                 that.terminate();
             });
 
-            this.log.info('Server starting to listen on port ' + this.config.port);
-            this.server.listen(this.config.port);
+            this.log.info('Server starting to listen on port ' + this.config.port + ((!this.config.bind || this.config.bind === '0.0.0.0') ? '' : ` (${this.config.bind})`));
+            this.server.listen(this.config.port, (!this.config.bind || this.config.bind === '0.0.0.0') ? undefined : this.config.bind);
         } catch (err) {
             this.log.error('Caught error in HTTP server: ' + err);
             that.terminate();

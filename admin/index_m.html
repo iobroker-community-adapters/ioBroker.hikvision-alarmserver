@@ -40,6 +40,18 @@
               .on("keyup", () => onChange());
           }
         });
+        getIPs(function (ips) {
+          for (var lp = 0; lp < ips.length; lp++) {
+            $("#bind").append(
+              '<option value="' +
+                ips[lp].address +
+                '">' +
+                ips[lp].name +
+                "</option>"
+            );
+          }
+          $("#bind.value").val(settings.bind ? settings.bind : '0.0.0.0').select();
+        });
         onChange(false);
         // reinitialize all the Materialize labels on the page if you are dynamically adding inputs:
         if (M) M.updateTextFields();
@@ -72,9 +84,13 @@
       </div>
 
       <div class="row">
-        <div class="col s6 input-field">
+        <div class="col s12 m4 12 input-field">
           <input type="text" class="value" id="port" />
           <label for="option2" class="translate">Listen port</label>
+        </div>
+        <div class="input-field col s12 m8 12" id="_bind">
+          <select class="value" id="bind"></select>
+          <label class="translate" for="bind">Listen address</label>
         </div>
       </div>
 
