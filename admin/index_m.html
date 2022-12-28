@@ -50,7 +50,9 @@
                 "</option>"
             );
           }
-          $("#bind.value").val(settings.bind ? settings.bind : '0.0.0.0').select();
+          $("#bind.value")
+            .val(settings.bind ? settings.bind : "0.0.0.0")
+            .select();
         });
         onChange(false);
         // reinitialize all the Materialize labels on the page if you are dynamically adding inputs:
