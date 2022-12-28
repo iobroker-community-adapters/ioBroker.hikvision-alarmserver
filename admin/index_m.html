@@ -1,12 +1,17 @@
 <html>
-
-<head>
-
+  <head>
     <!-- Load ioBroker scripts and styles-->
     <link rel="stylesheet" type="text/css" href="../../css/adapter.css" />
-    <link rel="stylesheet" type="text/css" href="../../lib/css/materialize.css">
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="../../lib/css/materialize.css"
+    />
 
-    <script type="text/javascript" src="../../lib/js/jquery-3.2.1.min.js"></script>
+    <script
+      type="text/javascript"
+      src="../../lib/js/jquery-3.2.1.min.js"
+    ></script>
     <script type="text/javascript" src="../../socket.io/socket.io.js"></script>
 
     <script type="text/javascript" src="../../js/translate.js"></script>
@@ -18,78 +23,89 @@
     <script type="text/javascript" src="words.js"></script>
 
     <script type="text/javascript">
-        // This will be called by the admin adapter when the settings page loads
-        function load(settings, onChange) {
-            // example: select elements with id=key and class=value and insert value
-            if (!settings) return;
-            $('.value').each(function () {
-                var $key = $(this);
-                var id = $key.attr('id');
-                if ($key.attr('type') === 'checkbox') {
-                    // do not call onChange direct, because onChange could expect some arguments
-                    $key.prop('checked', settings[id])
-                        .on('change', () => onChange())
-                        ;
-                } else {
-                    // do not call onChange direct, because onChange could expect some arguments
-                    $key.val(settings[id])
-                        .on('change', () => onChange())
-                        .on('keyup', () => onChange())
-                        ;
-                }
-            });
-            onChange(false);
-            // reinitialize all the Materialize labels on the page if you are dynamically adding inputs:
-            if (M) M.updateTextFields();
-        }
+      // This will be called by the admin adapter when the settings page loads
+      function load(settings, onChange) {
+        if (!settings) return;
+        $(".value").each(function () {
+          var $key = $(this);
+          var id = $key.attr("id");
+          if ($key.attr("type") === "checkbox") {
+            // do not call onChange direct, because onChange could expect some arguments
+            $key.prop("checked", settings[id]).on("change", () => onChange());
+          } else {
+            // do not call onChange direct, because onChange could expect some arguments
+            $key
+              .val(settings[id])
+              .on("change", () => onChange())
+              .on("keyup", () => onChange());
+          }
+        });
+        getIPs(function (ips) {
+          for (var lp = 0; lp < ips.length; lp++) {
+            $("#bind").append(
+              '<option value="' +
+                ips[lp].address +
+                '">' +
+                ips[lp].name +
+                "</option>"
+            );
+          }
+          $("#bind.value")
+            .val(settings.bind ? settings.bind : "0.0.0.0")
+            .select();
+        });
+        onChange(false);
+        // reinitialize all the Materialize labels on the page if you are dynamically adding inputs:
+        if (M) M.updateTextFields();
+      }
 
-        // This will be called by the admin adapter when the user presses the save button
-        function save(callback) {
-            // example: select elements with class=value and build settings object
-            var obj = {};
-            $('.value').each(function () {
-                var $this = $(this);
-                if ($this.attr('type') === 'checkbox') {
-                    obj[$this.attr('id')] = $this.prop('checked');
-                } else if ($this.attr('type') === 'number') {
-                    obj[$this.attr('id')] = parseFloat($this.val());
-                } else {
-                    obj[$this.attr('id')] = $this.val();
-                }
-            });
-            callback(obj);
-        }
+      // This will be called by the admin adapter when the user presses the save button
+      function save(callback) {
+        var obj = {};
+        $(".value").each(function () {
+          var $this = $(this);
+          if ($this.attr("type") === "checkbox") {
+            obj[$this.attr("id")] = $this.prop("checked");
+          } else if ($this.attr("type") === "number") {
+            obj[$this.attr("id")] = parseFloat($this.val());
+          } else {
+            obj[$this.attr("id")] = $this.val();
+          }
+        });
+        callback(obj);
+      }
     </script>
+  </head>
 
-</head>
-
-<body>
-
+  <body>
     <div class="m adapter-container">
-
-        <div class="row">
-            <div class="col s12 m4 l2">
-                <img src="hikvision-alarmserver.png" class="logo">
-            </div>
+      <div class="row">
+        <div class="col s12 m4 l2">
+          <img src="hikvision-alarmserver.png" class="logo" />
         </div>
+      </div>
 
-        <div class="row">
-            <div class="col s6 input-field">
-                <input type="text" class="value" id="port" />
-                <label for="option2" class="translate">Listen port</label>
-            </div>
+      <div class="row">
+        <div class="col s12 m4 12 input-field">
+          <input type="text" class="value" id="port" />
+          <label for="option2" class="translate">Listen port</label>
         </div>
+        <div class="input-field col s12 m8 12" id="_bind">
+          <select class="value" id="bind"></select>
+          <label class="translate" for="bind">Listen address</label>
+        </div>
+      </div>
 
-        <div class="row">
-            <div class="col s6 input-field">
-                <input type="checkbox" class="value" id="useChannels" />
-                <span class="translate">Create channels below devices</span>
-                <br/>
-                <span class="translate">Useful if you have devices that have more than one sensor.</span>
-            </div>
+      <div class="row">
+        <div class="col s6 input-field">
+          <input type="checkbox" class="value" id="useChannels" />
+          <span class="translate">Create channels below devices</span>
+          <br />
+          <span class="translate"
+            >Useful if you have devices that have more than one sensor.</span
+          >
         </div>
+      </div>
     </div>
-
-</body>
-
+  </body>
 </html>
