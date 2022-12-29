@@ -1,107 +1,120 @@
 {
-    "common": {
-        "name": "hikvision-alarmserver",
-        "version": "0.0.6",
-        "news": {
-            "0.0.6": {
-                "en": "Handle multipart message payload ([#5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5)).\nHandle payloads without XML declaration ([#7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7).)",
-                "de": "Multipart Message Payload #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nHandle-Payloads ohne XML-Deklaration #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
-                "ru": "Рукоять мультипарт-сообщения payload #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nРучка загрузок без XML декларации #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
-                "pt": "Lidar com a carga da mensagem multiparte #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nLidar com cargas de pagamento sem declaração XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
-                "nl": "Handel meerdere berichten loonlijsten.\nHandelbetalingen zonder XML verklaring 77:",
-                "fr": "Charge utile multipartite #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nCharges à main sans déclaration XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
-                "it": "Mantenere il carico del messaggio multipart #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nManiglia payload senza dichiarazione XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
-                "es": "Handle multipart message payload #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nCarga de mano sin declaración XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
-                "pl": "Handle multipart message payload (https:/github.com/iobroker-community-adapters/ioBrokervision-alarmserver/issues/5) (ang.).\nHandle payloads without XML declaration (https:/github.com/iobroker-community-adapters/ioBrokervision-alarmserver/issues/7) (ang.)",
-                "uk": "Завантаження багаточастинного повідомлення #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/products/5).\nЗавантажувальні навантаження без XML декларації #[7] (https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/products/7)",
-                "zh-cn": "中型多部门信息载荷#[5](http://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\n无XML宣言的垃圾载(http://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)"
-            },
-            "0.0.5": {
-                "en": "Drop colons from device IDs.",
-                "de": "Fallen Sie Kolonen aus Geräte-IDs.",
-                "ru": "Дорожные колонки с ID устройства.",
-                "pt": "Solte os pontos de identificação do dispositivo.",
-                "nl": "Laat kolonels vallen van apparaat ID's.",
-                "fr": "Lâchez les colons de l'appareil.",
-                "it": "Getta i punti dagli ID del dispositivo.",
-                "es": "Dejar los colones de las identificaciones de dispositivos.",
-                "pl": "Kolonie z urządzenia ID.",
-                "uk": "Поверніть колонки від ідентифікаторів пристрою.",
-                "zh-cn": "来自装置开发的人类慈善团体。."
-            },
-            "0.0.3": {
-                "en": "initial release",
-                "de": "Erstveröffentlichung",
-                "ru": "Начальная версия",
-                "pt": "lançamento inicial",
-                "nl": "Eerste uitgave",
-                "fr": "Première version",
-                "it": "Versione iniziale",
-                "es": "Versión inicial",
-                "pl": "Pierwsze wydanie",
-                "zh-cn": "首次出版"
-            }
-        },
-        "title": "Hikvision Alarm Server",
-        "titleLang": {
-            "en": "Hikvision Alarm Server",
-            "de": "Hikvision-Alarmserver",
-            "ru": "Сервер сигнализации Hikvision",
-            "pt": "Servidor de alarme Hikvision",
-            "nl": "Hikvision Alarm Server",
-            "fr": "Serveur d'alarme Hikvision",
-            "it": "Server di allarme Hikvision",
-            "es": "Servidor de alarma Hikvision",
-            "pl": "Serwer alarmowy Hikvision",
-            "zh-cn": "海康威视报警服务器"
-        },
-        "desc": {
-            "en": "An adapter to receive alarms/events send from Hikvision cameras.",
-            "de": "Ein Adapter zum Empfangen von Alarmen/Ereignissen, die von Hikvision-Kameras gesendet werden.",
-            "ru": "Адаптер для приема сигналов тревоги/событий, отправляемых с камер Hikvision.",
-            "pt": "Um adaptador para receber alarmes/eventos enviados de câmeras Hikvision.",
-            "nl": "Een adapter om alarmen/gebeurtenissen van Hikvision camera's te ontvangen.",
-            "fr": "Un adaptateur pour recevoir les alarmes/événements envoyés par les caméras Hikvision.",
-            "it": "Un adattatore per ricevere allarmi/eventi inviati dalle telecamere Hikvision.",
-            "es": "Un adaptador para recibir alarmas/eventos enviados desde cámaras Hikvision.",
-            "pl": "Adapter do odbierania alarmów/zdarzeń wysyłanych z kamer Hikvision.",
-            "zh-cn": "接收从海康威视摄像机发送的警报/事件的适配器。"
-        },
-        "authors": [
-            "Robin Rainton <robin@rainton.com>"
-        ],
-        "keywords": [
-            "hikvision",
-            "camera",
-            "alarm",
-            "event",
-            "alert",
-            "security"
-        ],
-        "license": "MIT",
-        "platform": "Javascript/Node.js",
-        "main": "main.js",
-        "icon": "hikvision-alarmserver.png",
-        "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/main/admin/hikvision-alarmserver.png",
-        "readme": "https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/blob/main/README.md",
-        "loglevel": "info",
-        "mode": "daemon",
-        "type": "alarm",
-        "compact": true,
-        "connectionType": "local",
-        "dataSource": "push",
-        "materialize": true,
-        "dependencies": [
-            {
-                "js-controller": ">=3.2.4"
-            }
-        ]
+  "common": {
+    "name": "hikvision-alarmserver",
+    "version": "0.0.7",
+    "news": {
+      "0.0.7": {
+        "en": "Add bind address option ([#9](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/9)).\nTry to derive device names from net-tools. Optionally use channelName from devices ([#10](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/10)).",
+        "de": "Bind-Adresse hinzufügen #[9](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/9).\nVersuchen Sie, Gerätenamen von Net-Tools abzuleiten. Verwenden Sie optional ChannelName von Geräten #[10](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/10).",
+        "ru": "Добавить опцию бид адреса #[9](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/9).\nПопробуйте вывести названия устройств из net-tools. Дополнительно используйте channelName от устройств #[10](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/10).",
+        "pt": "Adicionar opção de endereço de ligação #[9](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/9).\nTente derivar nomes de dispositivos de ferramentas líquidas. Use opcionalmente o canalNome de dispositivos #[10](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/10).",
+        "nl": "Add bindadres optie 9) (https)com/iobroker-community-apters/ioBroker.\nProbeer de namen van nettolen te ontleiden. Optioneel gebruik je kanaalname van apparatuur.",
+        "fr": "Ajouter l ' option d ' adresse bind #[9](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/9).\nEssayez de tirer les noms de périphériques des outils nets. Utiliser en option le canalNom des dispositifs #[10](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/10).",
+        "it": "#[9](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/9).\nCerca di derivare i nomi dei dispositivi da net-tools. Facoltativamente utilizzare il canaleName dai dispositivi #[10](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/10).",
+        "es": "Add bind address option #[9](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/9).\nTrate de derivar nombres de dispositivos de herramientas netas. Uso opcional del canalName desde dispositivos #[10](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/10).",
+        "pl": "Add wiąże opcję adresową #9 (https:/github.com/iobroker-community-adapters/ioBrokervision-alarmserver/issues/9) (ang.).\nTry to derive the names of devices from net-tools. Opcjonalnie używa kanałuName z urządzeń #10 (https:/github.com/iobroker-community-adapters/ioBrokervision-alarmserver/issues/10).",
+        "uk": "Додайте варіант зв'язування #[9] (https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/products/9).\nСпробуйте імена деревих пристроїв від net-tools. Необов'язково використовуйте каналName з пристроїв #[10] (https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/products/10).",
+        "zh-cn": "增加本可选择的行动[9](http://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/9).\n取自净工具的装置名称。 选择地使用“装置”第[10]号(http://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/10)."
+      },
+      "0.0.6": {
+        "en": "Handle multipart message payload ([#5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5)).\nHandle payloads without XML declaration ([#7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7).)",
+        "de": "Multipart Message Payload #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nHandle-Payloads ohne XML-Deklaration #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
+        "ru": "Рукоять мультипарт-сообщения payload #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nРучка загрузок без XML декларации #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
+        "pt": "Lidar com a carga da mensagem multiparte #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nLidar com cargas de pagamento sem declaração XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
+        "nl": "Handel meerdere berichten loonlijsten.\nHandelbetalingen zonder XML verklaring 77:",
+        "fr": "Charge utile multipartite #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nCharges à main sans déclaration XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
+        "it": "Mantenere il carico del messaggio multipart #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nManiglia payload senza dichiarazione XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
+        "es": "Handle multipart message payload #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nCarga de mano sin declaración XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
+        "pl": "Handle multipart message payload (https:/github.com/iobroker-community-adapters/ioBrokervision-alarmserver/issues/5) (ang.).\nHandle payloads without XML declaration (https:/github.com/iobroker-community-adapters/ioBrokervision-alarmserver/issues/7) (ang.)",
+        "uk": "Завантаження багаточастинного повідомлення #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/products/5).\nЗавантажувальні навантаження без XML декларації #[7] (https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/products/7)",
+        "zh-cn": "中型多部门信息载荷#[5](http://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\n无XML宣言的垃圾载(http://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)"
+      },
+      "0.0.5": {
+        "en": "Drop colons from device IDs.",
+        "de": "Fallen Sie Kolonen aus Geräte-IDs.",
+        "ru": "Дорожные колонки с ID устройства.",
+        "pt": "Solte os pontos de identificação do dispositivo.",
+        "nl": "Laat kolonels vallen van apparaat ID's.",
+        "fr": "Lâchez les colons de l'appareil.",
+        "it": "Getta i punti dagli ID del dispositivo.",
+        "es": "Dejar los colones de las identificaciones de dispositivos.",
+        "pl": "Kolonie z urządzenia ID.",
+        "uk": "Поверніть колонки від ідентифікаторів пристрою.",
+        "zh-cn": "来自装置开发的人类慈善团体。."
+      },
+      "0.0.3": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "zh-cn": "首次出版"
+      }
     },
-    "native": {
-        "port": 8089,
-        "useChannels": false
+    "title": "Hikvision Alarm Server",
+    "titleLang": {
+      "en": "Hikvision Alarm Server",
+      "de": "Hikvision-Alarmserver",
+      "ru": "Сервер сигнализации Hikvision",
+      "pt": "Servidor de alarme Hikvision",
+      "nl": "Hikvision Alarm Server",
+      "fr": "Serveur d'alarme Hikvision",
+      "it": "Server di allarme Hikvision",
+      "es": "Servidor de alarma Hikvision",
+      "pl": "Serwer alarmowy Hikvision",
+      "zh-cn": "海康威视报警服务器"
     },
-    "objects": [],
-    "instanceObjects": []
+    "desc": {
+      "en": "An adapter to receive alarms/events send from Hikvision cameras.",
+      "de": "Ein Adapter zum Empfangen von Alarmen/Ereignissen, die von Hikvision-Kameras gesendet werden.",
+      "ru": "Адаптер для приема сигналов тревоги/событий, отправляемых с камер Hikvision.",
+      "pt": "Um adaptador para receber alarmes/eventos enviados de câmeras Hikvision.",
+      "nl": "Een adapter om alarmen/gebeurtenissen van Hikvision camera's te ontvangen.",
+      "fr": "Un adaptateur pour recevoir les alarmes/événements envoyés par les caméras Hikvision.",
+      "it": "Un adattatore per ricevere allarmi/eventi inviati dalle telecamere Hikvision.",
+      "es": "Un adaptador para recibir alarmas/eventos enviados desde cámaras Hikvision.",
+      "pl": "Adapter do odbierania alarmów/zdarzeń wysyłanych z kamer Hikvision.",
+      "zh-cn": "接收从海康威视摄像机发送的警报/事件的适配器。"
+    },
+    "authors": [
+      "Robin Rainton <robin@rainton.com>"
+    ],
+    "keywords": [
+      "hikvision",
+      "camera",
+      "alarm",
+      "event",
+      "alert",
+      "security"
+    ],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "main": "main.js",
+    "icon": "hikvision-alarmserver.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/main/admin/hikvision-alarmserver.png",
+    "readme": "https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/blob/main/README.md",
+    "loglevel": "info",
+    "mode": "daemon",
+    "type": "alarm",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "push",
+    "materialize": true,
+    "dependencies": [
+      {
+        "js-controller": ">=3.2.4"
+      }
+    ]
+  },
+  "native": {
+    "port": 8089,
+    "useChannels": false
+  },
+  "objects": [],
+  "instanceObjects": []
 }
