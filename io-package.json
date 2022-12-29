@@ -4,17 +4,17 @@
         "version": "0.0.6",
         "news": {
             "0.0.6": {
-                "en": "Handle multipart message payload ([#5](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/5)).\nHandle payloads without XML declaration ([#7](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/7).)",
-                "de": "Multipart Message Payload #[5](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/5).\nHandle-Payloads ohne XML-Deklaration #[7](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/7)",
-                "ru": "Рукоять мультипарт-сообщения payload #[5](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/5).\nРучка загрузок без XML декларации #[7](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/7)",
-                "pt": "Lidar com a carga da mensagem multiparte #[5](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/5).\nLidar com cargas de pagamento sem declaração XML #[7](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/7)",
+                "en": "Handle multipart message payload ([#5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5)).\nHandle payloads without XML declaration ([#7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7).)",
+                "de": "Multipart Message Payload #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nHandle-Payloads ohne XML-Deklaration #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
+                "ru": "Рукоять мультипарт-сообщения payload #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nРучка загрузок без XML декларации #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
+                "pt": "Lidar com a carga da mensagem multiparte #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nLidar com cargas de pagamento sem declaração XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
                 "nl": "Handel meerdere berichten loonlijsten.\nHandelbetalingen zonder XML verklaring 77:",
-                "fr": "Charge utile multipartite #[5](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/5).\nCharges à main sans déclaration XML #[7](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/7)",
-                "it": "Mantenere il carico del messaggio multipart #[5](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/5).\nManiglia payload senza dichiarazione XML #[7](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/7)",
-                "es": "Handle multipart message payload #[5](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/5).\nCarga de mano sin declaración XML #[7](https://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/7)",
-                "pl": "Handle multipart message payload (https:/github.com/raintonr/ioBrokervision-alarmserver/issues/5) (ang.).\nHandle payloads without XML declaration (https:/github.com/raintonr/ioBrokervision-alarmserver/issues/7) (ang.)",
-                "uk": "Завантаження багаточастинного повідомлення #[5](https://github.com/raintonr/ioBroker.hikvision-alarmserver/products/5).\nЗавантажувальні навантаження без XML декларації #[7] (https://github.com/raintonr/ioBroker.hikvision-alarmserver/products/7)",
-                "zh-cn": "中型多部门信息载荷#[5](http://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/5).\n无XML宣言的垃圾载(http://github.com/raintonr/ioBroker.hikvision-alarmserver/issues/7)"
+                "fr": "Charge utile multipartite #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nCharges à main sans déclaration XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
+                "it": "Mantenere il carico del messaggio multipart #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nManiglia payload senza dichiarazione XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
+                "es": "Handle multipart message payload #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\nCarga de mano sin declaración XML #[7](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)",
+                "pl": "Handle multipart message payload (https:/github.com/iobroker-community-adapters/ioBrokervision-alarmserver/issues/5) (ang.).\nHandle payloads without XML declaration (https:/github.com/iobroker-community-adapters/ioBrokervision-alarmserver/issues/7) (ang.)",
+                "uk": "Завантаження багаточастинного повідомлення #[5](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/products/5).\nЗавантажувальні навантаження без XML декларації #[7] (https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/products/7)",
+                "zh-cn": "中型多部门信息载荷#[5](http://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/5).\n无XML宣言的垃圾载(http://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/7)"
             },
             "0.0.5": {
                 "en": "Drop colons from device IDs.",
@@ -83,8 +83,8 @@
         "main": "main.js",
         "icon": "hikvision-alarmserver.png",
         "enabled": true,
-        "extIcon": "https://raw.githubusercontent.com/raintonr/ioBroker.hikvision-alarmserver/main/admin/hikvision-alarmserver.png",
-        "readme": "https://github.com/raintonr/ioBroker.hikvision-alarmserver/blob/main/README.md",
+        "extIcon": "https://raw.githubusercontent.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/main/admin/hikvision-alarmserver.png",
+        "readme": "https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/blob/main/README.md",
         "loglevel": "info",
         "mode": "daemon",
         "type": "alarm",
