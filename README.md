@@ -34,7 +34,13 @@ It appears that cameras repeatedly issue events every second when those events a
 
 ### ioBroker
 
+#### Network
+
 In the adapter configuration, select a free port for the adapter to listen on (8089 by default).
+
+#### Alarm timeout
+
+Most devices signal an alarm is *active* by constantly sending alert messages. These devices never send an *inactive* message. Therefore the adapter assumes an alarm is cleared when no message is received after a given period of time. Specify that period here (default 5000ms).
 
 ### On Camera
 
@@ -52,6 +58,9 @@ Make sure to linkage in the events you would like to report to ioBroker includes
   Placeholder for the next version (at the beginning of the line):
   ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+-   (Robin Rainton) Added configuration for alarm timeout ([#16](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/16)).
+
 ### 0.0.7 (2022-12-29)
 -   (Robin Rainton) Add bind address option ([#9](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/9)).
 -   (Robin Rainton) Try to derive device names from net-tools. Optionally use channelName from devices ([#10](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/10)).
