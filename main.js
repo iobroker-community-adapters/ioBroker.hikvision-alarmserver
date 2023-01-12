@@ -228,7 +228,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         this.timers[stateId] = this.setTimeout(() => {
             this.setState(stateId, false, true);
             this.timers[stateId] = null;
-        }, 5000 /* TODO: make timeout option? */);
+        }, this.config.alarmTimeout);
     }
 
     async getDeviceName(device) {
