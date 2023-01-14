@@ -9,6 +9,8 @@
 const utils = require('@iobroker/adapter-core');
 const http = require('http');
 
+const bodyMaxLogLength = 1536;
+
 // TODO: awaiting release
 // const parseStringPromise = require('xml2js').parseStringPromise;
 
@@ -53,12 +55,20 @@ class HikvisionAlarmserver extends utils.Adapter {
 
                         if (xmlObj) {
                             that.logEvent(xmlObj);
+                            // Success
+                            response.statusCode = 200;
+                        } else {
+                            that.log.warn('No event XML found in payload - ignoring');
+                            response.statusCode = 400;
                         }
+                        response.end();
                     });
                 } else {
+                    // Error
                     that.log.warn('Received non-POST request - ignoring');
+                    response.statusCode = 400;
+                    response.end();
                 }
-                response.end();
             });
 
             this.server.on('error', function (err) {
@@ -100,7 +110,12 @@ class HikvisionAlarmserver extends utils.Adapter {
     }
 
     async decodePayload(request, body) {
-        this.log.debug(body);
+        if (body.length < bodyMaxLogLength) {
+            this.log.debug(body);
+        } else {
+            this.log.debug(`Body length of ${body.length} is too large to log, first ${bodyMaxLogLength} bytes follow:\n` +
+                body.substring(0, bodyMaxLogLength));
+        }
 
         let xmlObj = null;
 
@@ -121,7 +136,7 @@ class HikvisionAlarmserver extends utils.Adapter {
 
                     // Couldn't get parse-multipart-data to work. Possible TODO: use that.
                     // In the mean time, just pull out with a regexp
-                    const xmlRe = new RegExp(`--${boundary}.*Content-Length:\\s*\\d{1,}\\s*(<.*)--${boundary}--`, 's');
+                    const xmlRe = new RegExp(`--${boundary}.*Content-Length:\\s*\\d{1,}\\s*(<.*?)--${boundary}(--){0,1}`, 's');
                     const xmlMatches = body.match(xmlRe);
                     if (xmlMatches && xmlMatches.length) {
                         xmlString = xmlMatches[1];
