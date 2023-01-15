@@ -4,6 +4,9 @@
  * Created with @iobroker/create-adapter v2.0.2
  */
 
+const fs = require('fs-extra');
+const path = require('node:path');
+
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
@@ -40,6 +43,9 @@ class HikvisionAlarmserver extends utils.Adapter {
      * Is called when databases are connected and adapter received configuration.
      */
     async onReady() {
+        this.dataDir = utils.getAbsoluteInstanceDataDir(this);
+        this.log.debug('dataDir: ' + this.dataDir);
+
         const that = this;
         try {
             this.server = http.createServer(function (request, response) {
@@ -51,15 +57,11 @@ class HikvisionAlarmserver extends utils.Adapter {
                         body += data;
                     });
                     request.on('end', async function () {
-                        const xmlObj = await that.decodePayload(request, body);
-
-                        if (xmlObj) {
-                            that.logEvent(xmlObj);
-                            // Success
-                            response.statusCode = 200;
+                        that.dumpFile(body, 'request.txt');
+                        if (!await that.decodePayload(request, body)) {
+                            response.statusCode == 400; // Error
                         } else {
-                            that.log.warn('No event XML found in payload - ignoring');
-                            response.statusCode = 400;
+                            response.statusCode == 200; // Success
                         }
                         response.end();
                     });
@@ -109,7 +111,22 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
     }
 
+    async dumpFile(data, name) {
+        const fileName = path.join(this.dataDir, name);
+        this.log.debug(`Dumping ${data.length} bytes to ${fileName}`);
+        try {
+            await fs.outputFile(fileName, data, 'binary');
+        } catch (err) {
+            this.log.error(err);
+            return false; // Error
+        }
+        return true; // Success
+    }
+
     async decodePayload(request, body) {
+        // Assume failure
+        let success = false;
+
         if (body.length < bodyMaxLogLength) {
             this.log.debug(body);
         } else {
@@ -117,54 +134,100 @@ class HikvisionAlarmserver extends utils.Adapter {
                 body.substring(0, bodyMaxLogLength));
         }
 
-        let xmlObj = null;
-
         if (!('content-type' in request.headers)) {
             this.log.error('No content-type in header!');
         } else {
-            let xmlString = null;
             const contentTypeParts = request.headers['content-type'].split(';');
 
             if (contentTypeParts[0] == 'application/xml') {
                 // Payload was pure XML
-                xmlString = body;
+                await this.logXmlEvent(body);
             } else if (contentTypeParts[0] == 'multipart/form-data') {
-                const boundaryRe = new RegExp(' boundary=(.*)');
-                const boundaryMatches = request.headers['content-type'].match(boundaryRe);
-                if (boundaryMatches && boundaryMatches.length) {
-                    const boundary = boundaryMatches[1];
+                const boundaries = request.headers['content-type'].match(new RegExp(' boundary=(.*)'));
+                if (!boundaries || boundaries.length != 2) {
+                    this.log.error('No boundary found in multipart header: ' + request.headers['content-type']);
+                } else {
+                    const boundary = boundaries[1];
 
                     // Couldn't get parse-multipart-data to work. Possible TODO: use that.
                     // In the mean time, just pull out with a regexp
-                    const xmlRe = new RegExp(`--${boundary}.*Content-Length:\\s*\\d{1,}\\s*(<.*?)--${boundary}(--){0,1}`, 's');
-                    const xmlMatches = body.match(xmlRe);
-                    if (xmlMatches && xmlMatches.length) {
-                        xmlString = xmlMatches[1];
+                    // const xmlRe = new RegExp(`--${boundary}.*Content-Length:\\s*\\d{1,}\\s*(<.*?)--${boundary}(--){0,1}`, 's');
+                    const parts = body.match(new RegExp(`^--${boundary}(.*?)(?=^--${boundary})`, 'gsm'));
+                    if (!parts || !parts.length) {
+                        this.log.error('Failed to extract parts from multipart payload');
                     } else {
-                        this.log.error('Failed to extract XML from multipart payload (' + boundary + '): ' + body);
+                        // Got this far - assume success unless decode fails
+                        success = true;
+                        for (const part of parts) {
+                            if (!await this.decodePart(part)) {
+                                success = false;
+                            }
+                        }
                     }
-                } else {
-                    this.log.error('No boundary found in multipart header: ' + request.headers['content-type']);
                 }
             } else {
                 this.log.error('Unhandled content-type: ' + request.headers['content-type']);
             }
 
-            if (xmlString) {
-                try {
-                    xmlObj = await parseStringPromise(xmlString);
-                    if (!xmlObj) {
-                        this.log.error('Parse returned null XML');
-                    }
-                } catch (err) {
-                    this.log.error('Error parsing body: ' + err);
-                }
-            } else {
-                this.log.error('Could not find XML message in payload');
-            }
         }
 
-        return xmlObj;
+        return success;
+    }
+
+    // Again, such a shame couldn't get parse-multipart-data to work. Possible TODO: use that.
+    async decodePart(rawPart) {
+        this.log.debug(JSON.stringify(rawPart.substring(0, 256)));
+        // Hikvision cameras use \r\n for a newline
+        const rawHeaders = rawPart.match(new RegExp('(.*?)(?:\r\n){2}(.*)', 's'));
+        if (!rawHeaders || rawHeaders.length != 3) {
+            this.log.error('No blank line break found in payload part');
+        } else {
+            const textHeaders = rawHeaders[1].match(new RegExp('(.*?:\s*.*?)(?:\r\n)', 'g'));
+            if (!textHeaders || textHeaders.length == 0) {
+                this.log.error('No headers found in payload part');
+            } else {
+                const headers = {};
+                this.log.debug(JSON.stringify(textHeaders));
+                for (const header of textHeaders) {
+                    const headerParts = header.split(':');
+                    if (headerParts.length != 2) {
+                        this.log.error('Found malformed header');
+                    } else {
+                        this.log.debug(`Adding header ${headerParts[0].trim()}: ${headerParts[1].trim()}`);
+                        headers[headerParts[0].trim()] = headerParts[1].trim();
+                    }
+                }
+                this.log.debug(`Body length: ${rawHeaders[2].length} Headers: ${JSON.stringify(headers)}`);
+
+                // Handle content types we know
+                switch (headers['Content-Type']) {
+                    case 'application/xml':
+                        return this.logXmlEvent(rawHeaders[2]);
+                        break;
+                    case 'image/jpeg':
+                        this.log.debug('jpeg: ' + JSON.stringify(rawHeaders[2].substring(0, 128)));
+                        return this.dumpFile(rawHeaders[2], 'image.jpg');
+                        break;
+                    default:
+                        this.log.warn('Unhandled content type: ' + headers['Content-Type']);
+                }
+            }
+        }
+    }
+
+    async logXmlEvent(xmlString) {
+        let success = false;
+        try {
+            const xmlObj = await parseStringPromise(xmlString);
+            if (!xmlObj) {
+                this.log.error('Parse returned null XML');
+            } else {
+                success = await this.logEvent(xmlObj);
+            }
+        } catch (err) {
+            this.log.error('Error parsing XML: ' + err);
+        }
+        return success;
     }
 
     async logEvent(xml) {
@@ -177,7 +240,7 @@ class HikvisionAlarmserver extends utils.Adapter {
             eventType = xml.EventNotificationAlert.eventType[0];
         } catch (err) {
             this.log.error('Bad request - failed to find required XML attributes');
-            return;
+            return false; // Error
         }
 
         // Channel name is optional
@@ -237,6 +300,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
 
         // Set it true (event in progress)
+        this.log.debug('Triggering ' + stateId);
         await this.setStateChangedAsync(stateId, true, true);
 
         // ... and restart to clear (set false) after 5s
@@ -244,6 +308,8 @@ class HikvisionAlarmserver extends utils.Adapter {
             this.setState(stateId, false, true);
             this.timers[stateId] = null;
         }, this.config.alarmTimeout);
+
+        return true; // Success
     }
 
     async getDeviceName(device) {

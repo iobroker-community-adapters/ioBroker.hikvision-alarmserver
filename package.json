@@ -21,6 +21,7 @@
     "url": "https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver"
   },
   "dependencies": {
+    "fs-extra": "*",
     "http": "*",
     "@iobroker/adapter-core": "^2.5.1",
     "xml2js": "*"
