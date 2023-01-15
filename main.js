@@ -6,6 +6,7 @@
 
 const fs = require('fs-extra');
 const path = require('node:path');
+const multipart = require('parse-multipart-data');
 
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
@@ -44,21 +45,28 @@ class HikvisionAlarmserver extends utils.Adapter {
      */
     async onReady() {
         this.dataDir = utils.getAbsoluteInstanceDataDir(this);
+        this.dataDir = '/tmp/hv';
         this.log.debug('dataDir: ' + this.dataDir);
 
         const that = this;
         try {
             this.server = http.createServer(function (request, response) {
                 if (request.method == 'POST') {
-                    that.log.debug('Request headers: ' + JSON.stringify(request.headers));
+                    that.log.debug(`Request ${request.url} headers: ${JSON.stringify(request.headers)}`);
 
-                    let body = '';
+                    const chunks = [];
                     request.on('data', function (data) {
-                        body += data;
+                        chunks.push(data);
                     });
                     request.on('end', async function () {
-                        that.dumpFile(body, 'request.txt');
-                        if (!await that.decodePayload(request, body)) {
+                        const body = Buffer.concat(chunks);
+                        if (that.log.level == 'silly') {
+                            // Dump requests for debugging
+                            that.log.debug(`Handling request of ${body.length} bytes`);
+                            that.dumpFile(body, 'lastRequest.txt');
+                        }
+
+                        if (!await that.handlePayload(request.headers, body)) {
                             response.statusCode == 400; // Error
                         } else {
                             response.statusCode == 200; // Success
@@ -67,7 +75,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                     });
                 } else {
                     // Error
-                    that.log.warn('Received non-POST request - ignoring');
+                    that.log.warn(`Received non-POST request ${request.url}`);
                     response.statusCode = 400;
                     response.end();
                 }
@@ -123,7 +131,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         return true; // Success
     }
 
-    async decodePayload(request, body) {
+    async handlePayload(headers, body) {
         // Assume failure
         let success = false;
 
@@ -131,94 +139,63 @@ class HikvisionAlarmserver extends utils.Adapter {
             this.log.debug(body);
         } else {
             this.log.debug(`Body length of ${body.length} is too large to log, first ${bodyMaxLogLength} bytes follow:\n` +
-                body.substring(0, bodyMaxLogLength));
+                body.toString().substring(0, bodyMaxLogLength));
         }
 
-        if (!('content-type' in request.headers)) {
+        if (!('content-type' in headers)) {
             this.log.error('No content-type in header!');
         } else {
-            const contentTypeParts = request.headers['content-type'].split(';');
+            const contentType = headers['content-type'].toString().split(';')[0];
+            switch (contentType) {
+                case 'application/xml':
+                    // Payload was pure XML
+                    success = await this.logXmlEvent(body);
+                    break;
 
-            if (contentTypeParts[0] == 'application/xml') {
-                // Payload was pure XML
-                await this.logXmlEvent(body);
-            } else if (contentTypeParts[0] == 'multipart/form-data') {
-                const boundaries = request.headers['content-type'].match(new RegExp(' boundary=(.*)'));
-                if (!boundaries || boundaries.length != 2) {
-                    this.log.error('No boundary found in multipart header: ' + request.headers['content-type']);
-                } else {
-                    const boundary = boundaries[1];
-
-                    // Couldn't get parse-multipart-data to work. Possible TODO: use that.
-                    // In the mean time, just pull out with a regexp
-                    // const xmlRe = new RegExp(`--${boundary}.*Content-Length:\\s*\\d{1,}\\s*(<.*?)--${boundary}(--){0,1}`, 's');
-                    const parts = body.match(new RegExp(`^--${boundary}(.*?)(?=^--${boundary})`, 'gsm'));
-                    if (!parts || !parts.length) {
-                        this.log.error('Failed to extract parts from multipart payload');
-                    } else {
-                        // Got this far - assume success unless decode fails
-                        success = true;
-                        for (const part of parts) {
-                            if (!await this.decodePart(part)) {
-                                success = false;
-                            }
+                case 'multipart/form-data':
+                    const boundary = multipart.getBoundary(headers['content-type']);
+                    const parts = multipart.parse(body, boundary);
+                    this.log.debug(`Found ${parts.length} parts`);
+                    for (const part of parts) {
+                        if (!await this.decodePart(part)) {
+                            success = false;
                         }
                     }
-                }
-            } else {
-                this.log.error('Unhandled content-type: ' + request.headers['content-type']);
-            }
+                    break;
 
+                default:
+                    this.log.error('Unhandled content-type: ' + contentType);
+                    break;
+            }
         }
 
         return success;
     }
 
-    // Again, such a shame couldn't get parse-multipart-data to work. Possible TODO: use that.
-    async decodePart(rawPart) {
-        this.log.debug(JSON.stringify(rawPart.substring(0, 256)));
-        // Hikvision cameras use \r\n for a newline
-        const rawHeaders = rawPart.match(new RegExp('(.*?)(?:\r\n){2}(.*)', 's'));
-        if (!rawHeaders || rawHeaders.length != 3) {
-            this.log.error('No blank line break found in payload part');
-        } else {
-            const textHeaders = rawHeaders[1].match(new RegExp('(.*?:\s*.*?)(?:\r\n)', 'g'));
-            if (!textHeaders || textHeaders.length == 0) {
-                this.log.error('No headers found in payload part');
-            } else {
-                const headers = {};
-                this.log.debug(JSON.stringify(textHeaders));
-                for (const header of textHeaders) {
-                    const headerParts = header.split(':');
-                    if (headerParts.length != 2) {
-                        this.log.error('Found malformed header');
-                    } else {
-                        this.log.debug(`Adding header ${headerParts[0].trim()}: ${headerParts[1].trim()}`);
-                        headers[headerParts[0].trim()] = headerParts[1].trim();
-                    }
+    async decodePart(part) {
+        this.log.debug(JSON.stringify(part).substring(0, 1024));
+        // Handle content types we know
+        switch (part.type) {
+            case 'image/jpeg':
+                // Add .jpg to filename if not there
+                const extname = path.extname(part.filename);
+                if (extname != '.jpg' && extname != '.jpeg') {
+                    part.filename += '.jpg';
                 }
-                this.log.debug(`Body length: ${rawHeaders[2].length} Headers: ${JSON.stringify(headers)}`);
-
-                // Handle content types we know
-                switch (headers['Content-Type']) {
-                    case 'application/xml':
-                        return this.logXmlEvent(rawHeaders[2]);
-                        break;
-                    case 'image/jpeg':
-                        this.log.debug('jpeg: ' + JSON.stringify(rawHeaders[2].substring(0, 128)));
-                        return this.dumpFile(rawHeaders[2], 'image.jpg');
-                        break;
-                    default:
-                        this.log.warn('Unhandled content type: ' + headers['Content-Type']);
-                }
-            }
+                return this.dumpFile(part.data, part.filename);
+                break;
+            default:
+                // Assume XML
+                // TODO: this kindof sucks, but parse-multipart-data doesn't pull out XML for some reason
+                return this.logXmlEvent(part.data);
+                break;
         }
     }
 
-    async logXmlEvent(xmlString) {
+    async logXmlEvent(xmlBuffer) {
         let success = false;
         try {
-            const xmlObj = await parseStringPromise(xmlString);
+            const xmlObj = await parseStringPromise(new String(xmlBuffer));
             if (!xmlObj) {
                 this.log.error('Parse returned null XML');
             } else {

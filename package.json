@@ -24,6 +24,7 @@
     "fs-extra": "*",
     "http": "*",
     "@iobroker/adapter-core": "^2.5.1",
+    "parse-multipart-data": "*",
     "xml2js": "*"
   },
   "devDependencies": {
