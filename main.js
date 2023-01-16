@@ -235,15 +235,22 @@ class HikvisionAlarmserver extends utils.Adapter {
         // See if there are any co-ordinates for target
         let targetRect = null;
         try {
-            const x = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].X[0];
-            const y = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].Y[0];
-            const width = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].width[0];
-            const height = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].height[0];
-
-            this.log.debug(`TargetRect: ${x},${y},${width},${height}`);
+            const x = parseInt(ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].X[0]);
+            const y = parseInt(ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].Y[0]);
+            const width = parseInt(ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].width[0]);
+            const height = parseInt(ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].height[0]);
             targetRect = [x, y, width, height];
+
+            this.log.debug(`TargetRect: ${targetRect}`);
         } catch (err) {
             this.log.warn('Could not find target x/y/width/height');
+        }
+        let detectionTarget = null;
+        try {
+            detectionTarget = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].detectionTarget[0];
+            this.log.debug(`detectionTarget: ${detectionTarget}`);
+        } catch (err) {
+            this.log.warn('Could not find detectionTarget');
         }
 
         if (targetRect != null) {
@@ -251,14 +258,28 @@ class HikvisionAlarmserver extends utils.Adapter {
             // Draw target rectangle on image
             const img = await Canvas.loadImage(part.data);
             const canvas = Canvas.createCanvas(img.width, img.height);
-            const context = canvas.getContext('2d')
-            context.drawImage(img, 0, 0);
-            context.strokeStyle = 'blue';
-            context.strokeRect(...targetRect);
+            const cctx2d = canvas.getContext('2d')
+            cctx2d.drawImage(img, 0, 0);
+            cctx2d.strokeStyle = 'blue';
+            cctx2d.lineWidth = 4;
+            cctx2d.strokeRect(...targetRect);
+            if (detectionTarget != null) {
+                // Label rectangle
+                cctx2d.font = '24px sans-serif';
+                let metrics = cctx2d.measureText(detectionTarget);
+                this.log.debug(JSON.stringify(metrics));
+                cctx2d.fillStyle = 'blue'
+                cctx2d.fillRect(targetRect[0], targetRect[1],
+                    metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight + 2,
+                    metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent + 2);
+
+                cctx2d.fillStyle = 'black';
+                cctx2d.fillText(detectionTarget, targetRect[0], targetRect[1] + metrics.actualBoundingBoxAscent);
+            }
             this.dumpFile(ctx, canvas.toBuffer('image/jpeg'), fileName);
         } else {
             this.log.debug('Dumping original image');
-            this.dumpFile(ctx, part.data,fileName);
+            this.dumpFile(ctx, part.data, fileName);
         }
     }
 
