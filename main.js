@@ -68,11 +68,8 @@ class HikvisionAlarmserver extends utils.Adapter {
                             that.dumpFile(ctx, body, 'lastRequest.txt');
                         }
 
-                        if (!await that.handlePayload(request.headers, body)) {
-                            response.statusCode == 400; // Error
-                        } else {
-                            response.statusCode == 200; // Success
-                        }
+                        that.handlePayload(request.headers, body);
+                        response.statusCode == 200; // Always return success
                         response.end();
                     });
                 } else {
