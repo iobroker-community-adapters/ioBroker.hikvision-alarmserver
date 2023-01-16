@@ -15,7 +15,7 @@ const Canvas = require('canvas');
 const utils = require('@iobroker/adapter-core');
 const http = require('http');
 
-const bodyMaxLogLength = 1536;
+const bodyMaxLogLength = 256;
 
 // TODO: awaiting release
 // const parseStringPromise = require('xml2js').parseStringPromise;
@@ -47,8 +47,6 @@ class HikvisionAlarmserver extends utils.Adapter {
      */
     async onReady() {
         this.dataDir = utils.getAbsoluteInstanceDataDir(this);
-        this.dataDir = '/tmp/hv';
-        this.log.debug('dataDir: ' + this.dataDir);
 
         const that = this;
         try {
@@ -62,10 +60,10 @@ class HikvisionAlarmserver extends utils.Adapter {
                     });
                     request.on('end', async function () {
                         const body = Buffer.concat(chunks);
+                        that.log.debug(`Handling request of ${body.length} bytes`);
                         if (that.log.level == 'silly') {
                             // Dump requests for debugging
-                            that.log.debug(`Handling request of ${body.length} bytes`);
-                            that.dumpFile(ctx, body, 'lastRequest.txt');
+                            that.dumpFile({ periodPath: '' }, body, 'lastRequest.txt');
                         }
 
                         that.handlePayload(request.headers, body);
@@ -137,13 +135,19 @@ class HikvisionAlarmserver extends utils.Adapter {
             (!('filename' in part) && !('type' in part)));
     }
 
-    isImagePart(part) {
+    isJpegPart(part) {
         return (part.type == 'image/jpeg');
     }
 
     async handlePayload(headers, body) {
-        // Assume failure
-        let success = false;
+        if (this.log.level == 'silly') {
+            if (body.length < bodyMaxLogLength) {
+                this.log.debug(body);
+            } else {
+                this.log.debug(`Body length of ${body.length} is too large to log, first ${bodyMaxLogLength} bytes follow:\n` +
+                    body.toString().substring(0, bodyMaxLogLength));
+            }
+        }
 
         // Context for this event
         const ctx = {
@@ -151,26 +155,19 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
         ctx.periodPath = ctx.ts.toISOString().substring(0, 10);
 
-        if (body.length < bodyMaxLogLength) {
-            this.log.debug(body);
+        const contentTypeHeader = 'content-type';
+        if (!(contentTypeHeader in headers)) {
+            this.log.error('No content type in header!');
         } else {
-            this.log.debug(`Body length of ${body.length} is too large to log, first ${bodyMaxLogLength} bytes follow:\n` +
-                body.toString().substring(0, bodyMaxLogLength));
-        }
-
-        if (!('content-type' in headers)) {
-            this.log.error('No content-type in header!');
-        } else {
-            const contentType = headers['content-type'].toString().split(';')[0];
+            const contentType = headers[contentTypeHeader].toString().split(';')[0];
             switch (contentType) {
                 case 'application/xml':
                     // Payload was pure XML
-                    ctx.xml = await this.decodeXml(body);
-                    await this.logEvent(ctx);
+                    await this.handleXml(ctx, body);
                     break;
 
                 case 'multipart/form-data':
-                    const boundary = multipart.getBoundary(headers['content-type']);
+                    const boundary = multipart.getBoundary(headers[contentTypeHeader]);
                     const parts = multipart.parse(body, boundary);
                     this.log.debug(`Found ${parts.length} parts`);
 
@@ -182,8 +179,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                             if (ctx.xml) {
                                 this.log.warn('Payload seem to have more than one XML part!');
                             } else {
-                                ctx.xml = await this.decodeXml(part.data);
-                                await this.logEvent(ctx);
+                                await this.handleXml(ctx, part.data);
                                 if (this.config.saveXml) {
                                     this.dumpFile(ctx, part.data, ctx.fileBase + '.xml');
                                 }
@@ -191,35 +187,31 @@ class HikvisionAlarmserver extends utils.Adapter {
                         }
                     }
 
-                    // Only carry on if we've found the XML part of this message
-                    if (!ctx.xml) {
-                        this.log.warn('No XML found in multipart payload');
+                    // Only carry on if we've successfully logged the event above
+                    if (!ctx.eventLogged) {
+                        this.log.warn('Event logging failed - skipping other parts');
                     } else {
                         if (!this.config.saveImages) {
-                            this.log.debug('Skipping image(s)');
+                            this.log.debug('Skipping any image(s)');
                         } else {
                             // Now handle image parts
                             for (const part of parts) {
-                                if (this.isImagePart(part)) {
-                                    this.handleImagePart(ctx, part);
+                                if (this.isJpegPart(part)) {
+                                    this.handleJpegPart(ctx, part);
                                 }
                             }
                         }
                     }
-
                     break;
 
                 default:
-                    this.log.error('Unhandled content-type: ' + contentType);
+                    this.log.error('Unhandled content type: ' + contentType);
                     break;
             }
         }
     }
 
-    async handleImagePart(ctx, part) {
-        this.log.debug(JSON.stringify(part).substring(0, 1024));
-
-        // Handle content types we know
+    async handleJpegPart(ctx, part) {
         // Add .jpg to filename if not there
         let fileParts = path.parse(part.filename);
         if (fileParts.ext == '') {
@@ -236,39 +228,39 @@ class HikvisionAlarmserver extends utils.Adapter {
         const img = await Canvas.loadImage(part.data);
 
         // See if there are any co-ordinates for target
-        let targetRect = null;
+        let targetRect;
         try {
             // These co-ordinates seem to be 'normalised' to 0-1000 on both axis
             const xScale = img.width / 1000;
             const yScale = img.height / 1000;
 
             const xmlTargetRect = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0];
-            const x = parseInt(xmlTargetRect.X[0]) * xScale;
-            const y = parseInt(xmlTargetRect.Y[0]) * yScale;
-            const width = parseInt(xmlTargetRect.width[0]) * xScale;
-            const height = parseInt(xmlTargetRect.height[0]) * yScale;
-            targetRect = [x, y, width, height];
+            targetRect = [
+                parseInt(xmlTargetRect.X[0]) * xScale,
+                parseInt(xmlTargetRect.Y[0]) * yScale,
+                parseInt(xmlTargetRect.width[0]) * xScale,
+                parseInt(xmlTargetRect.height[0]) * yScale
+            ];
         } catch (err) {
             this.log.warn('Could not find target x/y/width/height');
         }
-        let detectionTarget = null;
+        let detectionTarget;
         try {
             detectionTarget = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].detectionTarget[0];
-            this.log.debug(`detectionTarget: ${detectionTarget}`);
         } catch (err) {
             this.log.warn('Could not find detectionTarget');
         }
 
-        if (targetRect != null) {
-            this.log.debug('Drawing targetRect: ' + targetRect);
+        if (targetRect) {
             // Draw target rectangle on image
+            this.log.debug(`Drawing targetRect: ${targetRect} (${detectionTarget})`);
             const canvas = Canvas.createCanvas(img.width, img.height);
             const cctx2d = canvas.getContext('2d')
             cctx2d.drawImage(img, 0, 0);
             cctx2d.strokeStyle = 'blue';
             cctx2d.lineWidth = 4;
             cctx2d.strokeRect(...targetRect);
-            if (detectionTarget != null) {
+            if (detectionTarget) {
                 // Label rectangle
                 cctx2d.font = '24px sans-serif';
                 let metrics = cctx2d.measureText(detectionTarget);
@@ -288,23 +280,22 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
     }
 
-    async decodeXml(xmlBuffer) {
-        let xmlObj = null;
+    async handleXml(ctx, xmlBuffer) {
         try {
-            xmlObj = await parseStringPromise(new String(xmlBuffer));
-            if (!xmlObj) {
+            ctx.xml = await parseStringPromise(new String(xmlBuffer));
+            if (!ctx.xml) {
                 this.log.error('Parse returned null XML');
+            } else {
+                await this.logXmlEvent(ctx);
             }
         } catch (err) {
             this.log.error('Error parsing XML: ' + err);
         }
-        return xmlObj;
     }
 
-    async logEvent(ctx) {
-        let macAddress = null;
-        let eventType = null;
-
+    async logXmlEvent(ctx) {
+        let macAddress;
+        let eventType;
         try {
             // This is inside a try...catch so we handle case when XML was bad.
             // TODO: make object names configurable? Mac? IP? etc.
@@ -312,6 +303,8 @@ class HikvisionAlarmserver extends utils.Adapter {
             eventType = ctx.xml.EventNotificationAlert.eventType[0];
         } catch (err) {
             this.log.error('Bad request - failed to find required XML attributes');
+            // We cannot carry on...
+            return;
         }
 
         // Channel name is optional
@@ -376,6 +369,8 @@ class HikvisionAlarmserver extends utils.Adapter {
         // Set it true (event in progress)
         this.log.debug('Triggering ' + stateId);
         await this.setStateChangedAsync(stateId, true, true);
+        // Set eventLogged so upon return any other parts are processed too
+        ctx.eventLogged = true;
 
         // ... and restart to clear (set false)
         this.timers[stateId] = this.setTimeout(() => {
