@@ -8,6 +8,8 @@ const fs = require('fs-extra');
 const path = require('node:path');
 const multipart = require('parse-multipart-data');
 
+const Canvas = require('canvas');
+
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
@@ -63,7 +65,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                         if (that.log.level == 'silly') {
                             // Dump requests for debugging
                             that.log.debug(`Handling request of ${body.length} bytes`);
-                            that.dumpFile(body, 'lastRequest.txt');
+                            that.dumpFile(ctx, body, 'lastRequest.txt');
                         }
 
                         if (!await that.handlePayload(request.headers, body)) {
@@ -119,8 +121,8 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
     }
 
-    async dumpFile(data, name) {
-        const fileName = path.join(this.dataDir, name);
+    async dumpFile(ctx, data, name) {
+        const fileName = path.join(this.dataDir, ctx.periodPath, name);
         this.log.debug(`Dumping ${data.length} bytes to ${fileName}`);
         try {
             await fs.outputFile(fileName, data, 'binary');
@@ -131,9 +133,26 @@ class HikvisionAlarmserver extends utils.Adapter {
         return true; // Success
     }
 
+    isXmlPart(part) {
+        // TODO: See if parse-multipart-data can be made to pull out XML type
+        // but until then, assume XML if no type and no filename.
+        return (part['type'] == 'application/xml' ||
+            (!('filename' in part) && !('type' in part)));
+    }
+
+    isImagePart(part) {
+        return (part.type == 'image/jpeg');
+    }
+
     async handlePayload(headers, body) {
         // Assume failure
         let success = false;
+
+        // Context for this event
+        const ctx = {
+            ts: new Date()
+        }
+        ctx.periodPath = ctx.ts.toISOString().substring(0, 10);
 
         if (body.length < bodyMaxLogLength) {
             this.log.debug(body);
@@ -149,18 +168,48 @@ class HikvisionAlarmserver extends utils.Adapter {
             switch (contentType) {
                 case 'application/xml':
                     // Payload was pure XML
-                    success = await this.logXmlEvent(body);
+                    ctx.xml = await this.decodeXml(body);
+                    await this.logEvent(ctx);
                     break;
 
                 case 'multipart/form-data':
                     const boundary = multipart.getBoundary(headers['content-type']);
                     const parts = multipart.parse(body, boundary);
                     this.log.debug(`Found ${parts.length} parts`);
+
+                    // Find XML first so we can pull out other details later
                     for (const part of parts) {
-                        if (!await this.decodePart(part)) {
-                            success = false;
+                        this.log.debug('Part keys: ' + JSON.stringify(Object.keys(part)));
+                        if (this.isXmlPart(part)) {
+                            this.log.debug('This part is XML: ' + part.data);
+                            if (ctx.xml) {
+                                this.log.warn('Payload seem to have more than one XML part!');
+                            } else {
+                                ctx.xml = await this.decodeXml(part.data);
+                                await this.logEvent(ctx);
+                                if (this.config.saveXml) {
+                                    this.dumpFile(ctx, part.data, ctx.fileBase + '.xml');
+                                }
+                            }
                         }
                     }
+
+                    // Only carry on if we've found the XML part of this message
+                    if (!ctx.xml) {
+                        this.log.warn('No XML found in multipart payload');
+                    } else {
+                        if (!this.config.saveImages) {
+                            this.log.debug('Skipping image(s)');
+                        } else {
+                            // Now handle image parts
+                            for (const part of parts) {
+                                if (this.isImagePart(part)) {
+                                    this.handleImagePart(ctx, part);
+                                }
+                            }
+                        }
+                    }
+
                     break;
 
                 default:
@@ -168,61 +217,83 @@ class HikvisionAlarmserver extends utils.Adapter {
                     break;
             }
         }
-
-        return success;
     }
 
-    async decodePart(part) {
+    async handleImagePart(ctx, part) {
         this.log.debug(JSON.stringify(part).substring(0, 1024));
+
         // Handle content types we know
-        switch (part.type) {
-            case 'image/jpeg':
-                // Add .jpg to filename if not there
-                const extname = path.extname(part.filename);
-                if (extname != '.jpg' && extname != '.jpeg') {
-                    part.filename += '.jpg';
-                }
-                return this.dumpFile(part.data, part.filename);
-                break;
-            default:
-                // Assume XML
-                // TODO: this kindof sucks, but parse-multipart-data doesn't pull out XML for some reason
-                return this.logXmlEvent(part.data);
-                break;
+        // Add .jpg to filename if not there
+        let fileParts = path.parse(part.filename);
+        if (fileParts.ext == '') {
+            fileParts.ext = '.jpg';
+        } else if (fileParts.ext != '.jpg' && fileParts.ext != '.jpeg') {
+            fileParts.ext += '.jpg';
+        }
+        // Prefix filename
+        fileParts.name = ctx.fileBase + '-' + fileParts.name;
+        fileParts.base = fileParts.name + fileParts.ext;
+        const fileName = path.format(fileParts);
+
+        // See if there are any co-ordinates for target
+        let targetRect = null;
+        try {
+            const x = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].X[0];
+            const y = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].Y[0];
+            const width = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].width[0];
+            const height = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].height[0];
+
+            this.log.debug(`TargetRect: ${x},${y},${width},${height}`);
+            targetRect = [x, y, width, height];
+        } catch (err) {
+            this.log.warn('Could not find target x/y/width/height');
+        }
+
+        if (targetRect != null) {
+            this.log.debug('Drawing targetRect: ' + targetRect);
+            // Draw target rectangle on image
+            const img = await Canvas.loadImage(part.data);
+            const canvas = Canvas.createCanvas(img.width, img.height);
+            const context = canvas.getContext('2d')
+            context.drawImage(img, 0, 0);
+            context.strokeStyle = 'blue';
+            context.strokeRect(...targetRect);
+            this.dumpFile(ctx, canvas.toBuffer('image/jpeg'), fileName);
+        } else {
+            this.log.debug('Dumping original image');
+            this.dumpFile(ctx, part.data,fileName);
         }
     }
 
-    async logXmlEvent(xmlBuffer) {
-        let success = false;
+    async decodeXml(xmlBuffer) {
+        let xmlObj = null;
         try {
-            const xmlObj = await parseStringPromise(new String(xmlBuffer));
+            xmlObj = await parseStringPromise(new String(xmlBuffer));
             if (!xmlObj) {
                 this.log.error('Parse returned null XML');
-            } else {
-                success = await this.logEvent(xmlObj);
             }
         } catch (err) {
             this.log.error('Error parsing XML: ' + err);
         }
-        return success;
+        return xmlObj;
     }
 
-    async logEvent(xml) {
+    async logEvent(ctx) {
         let macAddress = null;
         let eventType = null;
+
         try {
             // This is inside a try...catch so we handle case when XML was bad.
             // TODO: make object names configurable? Mac? IP? etc.
-            macAddress = xml.EventNotificationAlert.macAddress[0];
-            eventType = xml.EventNotificationAlert.eventType[0];
+            macAddress = ctx.xml.EventNotificationAlert.macAddress[0];
+            eventType = ctx.xml.EventNotificationAlert.eventType[0];
         } catch (err) {
             this.log.error('Bad request - failed to find required XML attributes');
-            return false; // Error
         }
 
         // Channel name is optional
-        const channelName = this.config.useChannels && xml.EventNotificationAlert?.channelName ?
-            xml.EventNotificationAlert.channelName[0] : null;
+        const channelName = this.config.useChannels && ctx.xml.EventNotificationAlert?.channelName ?
+            ctx.xml.EventNotificationAlert.channelName[0] : null;
 
         // Strip colons from ID to be consistent with net-tools
         const device = String(macAddress).replace(/:/g, '');
@@ -246,8 +317,8 @@ class HikvisionAlarmserver extends utils.Adapter {
                 mac: macAddress
             };
             // Add optional parts
-            if (xml.EventNotificationAlert?.ipAddress) {
-                native.ipAddress = xml.EventNotificationAlert.ipAddress[0];
+            if (ctx.xml.EventNotificationAlert?.ipAddress) {
+                native.ipAddress = ctx.xml.EventNotificationAlert.ipAddress[0];
             }
             await this.setObjectNotExistsAsync(device, {
                 type: 'device',
@@ -276,17 +347,18 @@ class HikvisionAlarmserver extends utils.Adapter {
             });
         }
 
+        // Stash derived data
+        ctx.fileBase = `${ctx.ts.getTime().toString(16)}-${device}-${eventType}`;
+
         // Set it true (event in progress)
         this.log.debug('Triggering ' + stateId);
         await this.setStateChangedAsync(stateId, true, true);
 
-        // ... and restart to clear (set false) after 5s
+        // ... and restart to clear (set false)
         this.timers[stateId] = this.setTimeout(() => {
             this.setState(stateId, false, true);
             this.timers[stateId] = null;
         }, this.config.alarmTimeout);
-
-        return true; // Success
     }
 
     async getDeviceName(device) {
