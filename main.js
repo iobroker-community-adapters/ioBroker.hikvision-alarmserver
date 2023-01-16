@@ -232,16 +232,22 @@ class HikvisionAlarmserver extends utils.Adapter {
         fileParts.base = fileParts.name + fileParts.ext;
         const fileName = path.format(fileParts);
 
+        // Load image now because we need dimensions to scale targetRect
+        const img = await Canvas.loadImage(part.data);
+
         // See if there are any co-ordinates for target
         let targetRect = null;
         try {
-            const x = parseInt(ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].X[0]);
-            const y = parseInt(ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].Y[0]);
-            const width = parseInt(ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].width[0]);
-            const height = parseInt(ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0].height[0]);
-            targetRect = [x, y, width, height];
+            // These co-ordinates seem to be 'normalised' to 0-1000 on both axis
+            const xScale = img.width / 1000;
+            const yScale = img.height / 1000;
 
-            this.log.debug(`TargetRect: ${targetRect}`);
+            const xmlTargetRect = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0];
+            const x = parseInt(xmlTargetRect.X[0]) * xScale;
+            const y = parseInt(xmlTargetRect.Y[0]) * yScale;
+            const width = parseInt(xmlTargetRect.width[0]) * xScale;
+            const height = parseInt(xmlTargetRect.height[0]) * yScale;
+            targetRect = [x, y, width, height];
         } catch (err) {
             this.log.warn('Could not find target x/y/width/height');
         }
@@ -256,7 +262,6 @@ class HikvisionAlarmserver extends utils.Adapter {
         if (targetRect != null) {
             this.log.debug('Drawing targetRect: ' + targetRect);
             // Draw target rectangle on image
-            const img = await Canvas.loadImage(part.data);
             const canvas = Canvas.createCanvas(img.width, img.height);
             const cctx2d = canvas.getContext('2d')
             cctx2d.drawImage(img, 0, 0);
