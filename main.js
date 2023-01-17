@@ -47,6 +47,9 @@ class HikvisionAlarmserver extends utils.Adapter {
      */
     async onReady() {
         this.dataDir = utils.getAbsoluteInstanceDataDir(this);
+        this.log.debug(JSON.stringify(this.config));
+        // Function used to construct messages for SendTo
+        this.sentToMessageFn = new Function('imageBuffer', 'ctx', `return ${this.config.sendToMessage};`);
 
         const that = this;
         try {
@@ -191,7 +194,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                     if (!ctx.eventLogged) {
                         this.log.warn('Event logging failed - skipping other parts');
                     } else {
-                        if (!this.config.saveImages) {
+                        if (!this.config.saveImages && this.config.sendToInstanceName == '') {
                             this.log.debug('Skipping any image(s)');
                         } else {
                             // Now handle image parts
@@ -251,6 +254,7 @@ class HikvisionAlarmserver extends utils.Adapter {
             this.log.warn('Could not find detectionTarget');
         }
 
+        let imageBuffer = part.data;
         if (targetRect) {
             // Draw target rectangle on image
             this.log.debug(`Drawing targetRect: ${targetRect} (${detectionTarget})`);
@@ -273,10 +277,30 @@ class HikvisionAlarmserver extends utils.Adapter {
                 cctx2d.fillStyle = 'black';
                 cctx2d.fillText(detectionTarget, targetRect[0], targetRect[1] + metrics.actualBoundingBoxAscent);
             }
-            this.dumpFile(ctx, canvas.toBuffer('image/jpeg'), fileName);
-        } else {
-            this.log.debug('Dumping original image');
-            this.dumpFile(ctx, part.data, fileName);
+            imageBuffer = canvas.toBuffer('image/jpeg');
+        }
+
+        if (this.config.saveImages) {
+            this.dumpFile(ctx, imageBuffer, fileName);
+        }
+
+        if (this.config.sendToInstanceName) {
+            const sendToArgs = [this.config.sendToInstanceName];
+            if (this.config.sendToCommand) {
+                sendToArgs.push(this.config.sendToCommand);
+            }
+            this.log.debug('sendTo: ' + sendToArgs);
+
+            try {
+                // sendToMessage config is a code snipped string that evaluates to the message to send.
+                // Available variables passed into this code snippet string are simply 'imageBuffer'.
+                // TODO: Add more items from ctx.
+                sendToArgs.push(this.sentToMessageFn(imageBuffer, ctx));
+                this.log.debug(JSON.stringify(sendToArgs).substring(0, 1024));
+                this.sendTo(...sendToArgs);
+            } catch (err) {
+                this.log.error('Failed in sendTo: ' + err);
+            }
         }
     }
 
@@ -294,13 +318,11 @@ class HikvisionAlarmserver extends utils.Adapter {
     }
 
     async logXmlEvent(ctx) {
-        let macAddress;
-        let eventType;
         try {
             // This is inside a try...catch so we handle case when XML was bad.
             // TODO: make object names configurable? Mac? IP? etc.
-            macAddress = ctx.xml.EventNotificationAlert.macAddress[0];
-            eventType = ctx.xml.EventNotificationAlert.eventType[0];
+            ctx.macAddress = ctx.xml.EventNotificationAlert.macAddress[0];
+            ctx.eventType = ctx.xml.EventNotificationAlert.eventType[0];
         } catch (err) {
             this.log.error('Bad request - failed to find required XML attributes');
             // We cannot carry on...
@@ -308,52 +330,52 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
 
         // Channel name is optional
-        const channelName = this.config.useChannels && ctx.xml.EventNotificationAlert?.channelName ?
+        ctx.channelName = this.config.useChannels && ctx.xml.EventNotificationAlert?.channelName ?
             ctx.xml.EventNotificationAlert.channelName[0] : null;
 
         // Strip colons from ID to be consistent with net-tools
-        const device = String(macAddress).replace(/:/g, '');
-        const stateId = device +
-            (channelName != null ? '.' + channelName : '') +
-            ('.' + eventType);
+        ctx.device = String(ctx.macAddress).replace(/:/g, '');
+        ctx.stateId = ctx.device +
+            (ctx.channelName != null ? '.' + ctx.channelName : '') +
+            ('.' + ctx.eventType);
 
         // Cancel any existing timer for this state
-        if (stateId in this.timers) {
-            if (this.timers[stateId]) {
-                this.clearTimeout(this.timers[stateId]);
-                this.timers[stateId] = null;
+        if (ctx.stateId in this.timers) {
+            if (this.timers[ctx.stateId]) {
+                this.clearTimeout(this.timers[ctx.stateId]);
+                this.timers[ctx.stateId] = null;
             }
         } else {
             // Create device/channels/state if not there...
             // ... which will only be attempted if not in timers as if this ID is in the
             // timers object we must have already seen it and created the state.
 
-            this.log.debug('Creating device ' + device);
+            this.log.debug('Creating device ' + ctx.device);
             const native = {
-                mac: macAddress
+                mac: ctx.macAddress
             };
             // Add optional parts
             if (ctx.xml.EventNotificationAlert?.ipAddress) {
                 native.ipAddress = ctx.xml.EventNotificationAlert.ipAddress[0];
             }
-            await this.setObjectNotExistsAsync(device, {
+            await this.setObjectNotExistsAsync(ctx.device, {
                 type: 'device',
                 common: {
-                    name: await this.getDeviceName(device)
+                    name: await this.getDeviceName(ctx.device)
                 },
                 native: native
             });
 
-            if (channelName != null) {
-                this.log.debug('Creating channel ' + channelName);
-                await this.createChannelAsync(device, channelName);
+            if (ctx.channelName != null) {
+                this.log.debug('Creating channel ' + ctx.channelName);
+                await this.createChannelAsync(ctx.device, ctx.channelName);
             }
 
-            this.log.debug('Creating state ' + stateId);
-            await this.setObjectNotExistsAsync(stateId, {
+            this.log.debug('Creating state ' + ctx.stateId);
+            await this.setObjectNotExistsAsync(ctx.stateId, {
                 type: 'state',
                 common: {
-                    name: eventType,
+                    name: ctx.eventType,
                     type: 'boolean',
                     role: 'indicator',
                     read: true,
@@ -364,18 +386,18 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
 
         // Stash derived data
-        ctx.fileBase = `${ctx.ts.getTime().toString(16)}-${device}-${eventType}`;
+        ctx.fileBase = `${ctx.ts.getTime().toString(16)}-${ctx.device}-${ctx.eventType}`;
 
         // Set it true (event in progress)
-        this.log.debug('Triggering ' + stateId);
-        await this.setStateChangedAsync(stateId, true, true);
+        this.log.debug('Triggering ' + ctx.stateId);
+        await this.setStateChangedAsync(ctx.stateId, true, true);
         // Set eventLogged so upon return any other parts are processed too
         ctx.eventLogged = true;
 
         // ... and restart to clear (set false)
-        this.timers[stateId] = this.setTimeout(() => {
-            this.setState(stateId, false, true);
-            this.timers[stateId] = null;
+        this.timers[ctx.stateId] = this.setTimeout(() => {
+            this.setState(ctx.stateId, false, true);
+            this.timers[ctx.stateId] = null;
         }, this.config.alarmTimeout);
     }
 

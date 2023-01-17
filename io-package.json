@@ -117,7 +117,10 @@
     "useChannels": false,
     "alarmTimeout": 5000,
     "saveImages": false,
-    "saveXml": false
+    "saveXml": false,
+    "sendToInstanceName": "",
+    "sendToCommand": "",
+    "sendToMessage": ""
   },
   "objects": [],
   "instanceObjects": []
