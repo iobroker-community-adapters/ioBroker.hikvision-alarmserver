@@ -42,6 +42,37 @@ In the adapter configuration, select a free port for the adapter to listen on (8
 
 Most devices signal an alarm is *active* by constantly sending alert messages. These devices never send an *inactive* message. Therefore the adapter assumes an alarm is cleared when no message is received after a given period of time. Specify that period here (default 5000ms).
 
+#### Channel tree
+
+Some cameras (eg. with multiple sensors) report on multiple channels (not to be confused with ioBroker channels). In order to differentiate events between each of the camera's channels check the appropriate option.
+
+For specific event types (eg. field detection, line crossing, etc), some cameras are able to identify motion detection targets (eg. human, vehicle, etc). To create a state for each of these targets under each applicable event type, check the appropriate option.
+
+#### sendTo
+
+Some event types received have a simple boolean on/off (duration, VMD, etc). For these simple events, setting the appropriate state in ioBroker's object tree is sufficient.
+
+However, some events received include binary data such as images which would be impractical to constantly store in the ioBroker object tree. A more graceful mechanism to handle such events it to use ioBroker's inbuilt messaging system which allows message objects to be communicated between adapters.
+
+Configuration in this section can cause event data (configurable in the `Send to message` field) to be sent to the appropriate adapter.
+
+A simple example would be if the Telegram adapter has been installed, one could set the following parameters:
+
+* Send to instance name: `telegram.0`
+* Send to command: Leave blank
+* Send to message: `{ text: imageBuffer, type: 'photo' }`
+
+With this, each image received is sent on to the telegram adapter for direct distrubtion to users.
+
+Using a modified configuration, images could be sent to email for example, or to a custom script (using Javascript adapter) for further processing.
+
+#### Saving event data
+
+If checked event XML and/or image data is store on the local filesystem under `iobroker-data/hikvision-alarmserver.<instance>`.
+
+*Warning!* these files are not currently purged or archived so use with caution or implement an external strategy for this.
+
+
 ### On Camera
 
 Visit the configuration page of your camera(s) and define ioBroker IP/host and port settings:
@@ -61,7 +92,7 @@ Make sure to linkage in the events you would like to report to ioBroker includes
 ### **WORK IN PROGRESS**
 -   (Robin Rainton) Added configuration for alarm timeout ([#16](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/16)).
 -   (Robin Rainton) Fixed multipart message handling for line crossing/field detection, etc ([#18](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/18)).
--   (Robin Rainton) Optionally send events using `sendTo` to other adapters ([#20](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/20)).
+-   (Robin Rainton) Optionally save XML/images & send events using `sendTo` to other adapters ([#20](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/20)).
 
 ### 0.0.7 (2022-12-29)
 -   (Robin Rainton) Add bind address option ([#9](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/9)).
