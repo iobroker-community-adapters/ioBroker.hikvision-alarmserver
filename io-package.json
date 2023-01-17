@@ -115,6 +115,7 @@
     "bind": "0.0.0.0",
     "port": 8089,
     "useChannels": false,
+    "useDetectionTargets": false,
     "alarmTimeout": 5000,
     "saveImages": false,
     "saveXml": false,
