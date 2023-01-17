@@ -247,27 +247,21 @@ class HikvisionAlarmserver extends utils.Adapter {
         } catch (err) {
             this.log.warn('Could not find target x/y/width/height');
         }
-        let detectionTarget;
-        try {
-            detectionTarget = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].detectionTarget[0];
-        } catch (err) {
-            this.log.warn('Could not find detectionTarget');
-        }
 
         let imageBuffer = part.data;
         if (targetRect) {
             // Draw target rectangle on image
-            this.log.debug(`Drawing targetRect: ${targetRect} (${detectionTarget})`);
+            this.log.debug(`Drawing targetRect: ${targetRect} (${ctx.detectionTarget})`);
             const canvas = Canvas.createCanvas(img.width, img.height);
             const cctx2d = canvas.getContext('2d')
             cctx2d.drawImage(img, 0, 0);
             cctx2d.strokeStyle = 'blue';
             cctx2d.lineWidth = 4;
             cctx2d.strokeRect(...targetRect);
-            if (detectionTarget) {
+            if (ctx.detectionTarget) {
                 // Label rectangle
                 cctx2d.font = '24px sans-serif';
-                let metrics = cctx2d.measureText(detectionTarget);
+                let metrics = cctx2d.measureText(ctx.detectionTarget);
                 this.log.debug(JSON.stringify(metrics));
                 cctx2d.fillStyle = 'blue'
                 cctx2d.fillRect(targetRect[0], targetRect[1],
@@ -275,7 +269,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                     metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent + 2);
 
                 cctx2d.fillStyle = 'black';
-                cctx2d.fillText(detectionTarget, targetRect[0], targetRect[1] + metrics.actualBoundingBoxAscent);
+                cctx2d.fillText(ctx.detectionTarget, targetRect[0], targetRect[1] + metrics.actualBoundingBoxAscent);
             }
             imageBuffer = canvas.toBuffer('image/jpeg');
         }
@@ -328,15 +322,35 @@ class HikvisionAlarmserver extends utils.Adapter {
             // We cannot carry on...
             return;
         }
-
+        // detection Target is optional
+        try {
+            ctx.detectionTarget = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].detectionTarget[0];
+        } catch (err) {
+            this.log.debug('No detectionTarget found');
+        }
         // Channel name is optional
-        ctx.channelName = this.config.useChannels && ctx.xml.EventNotificationAlert?.channelName ?
-            ctx.xml.EventNotificationAlert.channelName[0] : null;
+        try {
+            ctx.channelName = ctx.xml.EventNotificationAlert.channelName[0];
+        } catch (err) {
+            this.log.debug('No channelName found');
+        }
+
+        // Channel for state
+        let channelName;
+        if (this.config.useDetectionTargets && ctx.detectionTarget) {
+            if (this.config.useChannels && ctx.channelName) {
+                channelName = ctx.channelName + '.' + ctx.detectionTarget;
+            } else {
+                channelName = ctx.detectionTarget;
+            }
+        } else if (this.config.useChannels && ctx.channelName) {
+            channelName = ctx.channelName;
+        }
 
         // Strip colons from ID to be consistent with net-tools
         ctx.device = String(ctx.macAddress).replace(/:/g, '');
         ctx.stateId = ctx.device +
-            (ctx.channelName != null ? '.' + ctx.channelName : '') +
+            (channelName ? '.' + channelName : '') +
             ('.' + ctx.eventType);
 
         // Cancel any existing timer for this state
@@ -366,9 +380,9 @@ class HikvisionAlarmserver extends utils.Adapter {
                 native: native
             });
 
-            if (ctx.channelName != null) {
-                this.log.debug('Creating channel ' + ctx.channelName);
-                await this.createChannelAsync(ctx.device, ctx.channelName);
+            if (channelName != null) {
+                this.log.debug('Creating channel ' + channelName);
+                await this.createChannelAsync(ctx.device, channelName);
             }
 
             this.log.debug('Creating state ' + ctx.stateId);
