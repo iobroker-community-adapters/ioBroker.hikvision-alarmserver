@@ -61,6 +61,7 @@ Make sure to linkage in the events you would like to report to ioBroker includes
 ### **WORK IN PROGRESS**
 -   (Robin Rainton) Added configuration for alarm timeout ([#16](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/16)).
 -   (Robin Rainton) Fixed multipart message handling for line crossing/field detection, etc ([#18](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/18)).
+-   (Robin Rainton) Optionally send events using `sendTo` to other adapters ([[#20](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/20)]).
 
 ### 0.0.7 (2022-12-29)
 -   (Robin Rainton) Add bind address option ([#9](https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/issues/9)).
