@@ -80,113 +80,147 @@
   <body>
     <div class="m adapter-container">
       <div class="row">
-        <div class="col s12 m4 l2">
-          <img src="hikvision-alarmserver.png" class="logo" />
+        <div class="col s12">
+          <ul class="tabs">
+            <li class="tab col s2">
+              <a href="#tab-main" class="translate active">Main settings</a>
+            </li>
+            <li class="tab col s2 channels">
+              <a href="#tab-channels" class="translate">Channels</a>
+            </li>
+            <li class="tab col s2 send">
+              <a href="#tab-send" class="translate">Sending</a>
+            </li>
+            <li class="tab col s2 save">
+              <a href="#tab-save" class="translate">Saving</a>
+            </li>
+          </ul>
         </div>
-      </div>
 
-      <div class="row">
-        <div class="col s12 m4 12 input-field">
-          <input type="text" class="value" id="port" />
-          <label for="port" class="translate">Listen port</label>
-        </div>
-        <div class="input-field col s12 m8 12" id="_bind">
-          <select class="value" id="bind"></select>
-          <label class="translate" for="bind">Listen address</label>
-        </div>
-      </div>
+        <div id="tab-main" class="col s12 page">
+          <div class="row">
+            <div class="col s12 m4 l2">
+              <img src="hikvision-alarmserver.png" class="logo" />
+            </div>
+          </div>
 
-      <div class="row">
-        <div class="col s12 m4 12 input-field">
-          <input type="text" class="value" id="alarmTimeout" />
-          <label for="alarmTimeout" class="translate">Alarm timeout (ms)</label>
-          <br />
-          <span class="translate">
-            Time (in milliseconds) after no message reception that an alarm is
-            cleared.
-          </span>
-        </div>
-      </div>
+          <div class="row">
+            <div class="col s12 m4 12 input-field">
+              <input type="text" class="value" id="port" />
+              <label for="port" class="translate">Listen port</label>
+            </div>
+            <div class="input-field col s12 m8 12" id="_bind">
+              <select class="value" id="bind"></select>
+              <label class="translate" for="bind">Listen address</label>
+            </div>
+          </div>
 
-      <hr />
-      <!-- TODO: would be better to use tabs -->
+          <div class="row">
+            <div class="col s12 m4 12 input-field">
+              <input type="text" class="value" id="alarmTimeout" />
+              <label for="alarmTimeout" class="translate">
+                Alarm timeout (ms)
+              </label>
+              <br />
+              <span class="translate">
+                Time (in milliseconds) after no message reception that an alarm
+                is cleared.
+              </span>
+            </div>
+          </div>
+        </div>
 
-      <div class="row">
-        <div class="col s12 input-field">
-          <input type="checkbox" class="value" id="useChannels" />
-          <span class="translate">Create camera channels below devices</span>
-          <br />
-          <span class="translate">
-            Can be useful for devices that have more than one sensor.
-          </span>
+        <div id="tab-channels" class="col s12 page">
+          <div class="row">
+            <div class="col s12 input-field">
+              <input type="checkbox" class="value" id="useChannels" />
+              <span class="translate">
+                Create camera channels below devices
+              </span>
+              <br />
+              <span class="translate">
+                Can be useful for devices that have more than one sensor.
+              </span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s12 input-field">
+              <input type="checkbox" class="value" id="useDetectionTargets" />
+              <span class="translate">
+                Create camera detection target channels below devices
+              </span>
+              <br />
+              <span class="translate">
+                Can be useful for smart devices that classify motion targets
+                (eg. 'human', 'vehicle', etc').
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="row">
-        <div class="col s12 input-field">
-          <input type="checkbox" class="value" id="useDetectionTargets" />
-          <span class="translate"
-            >Create camera detection target channels below devices</span
-          >
-          <br />
-          <span class="translate">
-            Can be useful for smart devices that classify motion targets (eg.
-            'human', 'vehicle', etc').
-          </span>
-        </div>
-      </div>
 
-      <hr />
+        <div id="tab-send" class="col s12 page">
+          <div class="row">
+            <div class="col s12 translate">
+              It is possible to use ioBroker's <i>sendTo</i> functionality to
+              send event XML and/or images to to other adapters (eg. Telegram,
+              email, pushsafer, etc).
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s6 input-field">
+              <input type="text" class="value" id="sendToInstanceName" />
+              <label for="sendToInstanceName" class="translate">
+                Send to instance name
+              </label>
+              <span>Leave this blank to disable sendTo functionality.</span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s6 input-field">
+              <input type="text" class="value" id="sendToCommand" />
+              <label for="sendToCommand" class="translate">
+                Send to command
+              </label>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s6 input-field">
+              <input type="text" class="value" id="sendToMessage" />
+              <label for="sendToMessage" class="translate">
+                Send to message
+              </label>
+              <br />
+              <span class="translate">
+                JS code to construct the message object to send.<br />
+                Eg. to send images to Telegram use,
+                <i>{ text: imageBuffer, type: 'photo' }</i>.<br />
+                For available variables are <i>imageBuffer</i> and
+                <i>ctx</i> (event context).
+              </span>
+            </div>
+          </div>
+        </div>
 
-      <div class="row">
-        <div class="col s12 translate">
-          It is possible to use ioBroker's <i>sendTo</i> functionality to send
-          event XML and/or images to to other adapters (eg. Telegram, email,
-          pushsafer, etc).
-        </div>
-        <div class="col s6 input-field">
-          <input type="text" class="value" id="sendToInstanceName" />
-          <label for="sendToInstanceName" class="translate"
-            >Send to instance name</label
-          >
-        </div>
-      </div>
-      <div class="row">
-        <div class="col s6 input-field">
-          <input type="text" class="value" id="sendToCommand" />
-          <label for="sendToCommand" class="translate">Send to command</label>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col s6 input-field">
-          <input type="text" class="value" id="sendToMessage" />
-          <label for="sendToMessage" class="translate">Send to message</label>
-          <br />
-          <span class="translate">
-            JS code to construct the message object to send.<br />
-            Eg. to send images to Telegram use,
-            <i>{ text: imageBuffer, type: 'photo' }</i>.<br />
-            For available variables are <i>imageBuffer</i> and <i>ctx</i> (event
-            context).
-          </span>
-        </div>
-      </div>
-
-      <hr />
-
-      <div class="row">
-        <div class="col s12 translate">
-          It is possible to save event XML and/or images (to the iobroker-data
-          dirctory) for further processing/analysis/archiving/etc.
-        </div>
-        <div class="col s6 input-field">
-          <input type="checkbox" class="value" id="saveXml" />
-          <span class="translate">Save event XML</span>
-        </div>
-      </div>
-      <div class="row">
-        <div class="col s6 input-field">
-          <input type="checkbox" class="value" id="saveImages" />
-          <span class="translate">Save event images</span>
+        <div id="tab-save" class="col s12 page">
+          <div class="row">
+            <div class="col s12 translate">
+              It is possible to save event XML and/or images (to the
+              iobroker-data dirctory) for further
+              processing/analysis/archiving/etc.
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s6 input-field">
+              <input type="checkbox" class="value" id="saveXml" />
+              <span class="translate">Save event XML</span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col s6 input-field">
+              <input type="checkbox" class="value" id="saveImages" />
+              <span class="translate">Save event images</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
