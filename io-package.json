@@ -121,7 +121,9 @@
     "saveXml": false,
     "sendToInstanceName": "",
     "sendToCommand": "",
-    "sendToMessage": ""
+    "sendToMessage": "",
+    "sendToThrottle": 0,
+    "sendToThrottleByDevice": true
   },
   "objects": [],
   "instanceObjects": []

@@ -38,7 +38,8 @@ class HikvisionAlarmserver extends utils.Adapter {
         this.on('ready', this.onReady.bind(this));
         this.on('unload', this.onUnload.bind(this));
 
-        this.timers = [];
+        this.stateTimers = [];
+        this.throttleTimers = [];
         this.server = null;
     }
 
@@ -95,27 +96,27 @@ class HikvisionAlarmserver extends utils.Adapter {
     }
 
     /**
-     * Is called when adapter shuts down - callback has to be called under any circumstances!
-     * @param {() => void} callback
+     * Is called when adapter shuts down
      */
-    async onUnload(callback) {
+    async onUnload() {
         try {
             if (this.server) {
                 this.server.close();
                 this.log.info('Closed server');
             }
-            /* Clear any timers and set all to false immediately */
-            Object.keys(this.timers).forEach(async (id) => {
-                if (this.timers[id]) {
-                    this.clearTimeout(this.timers[id]);
-                    this.timers[id] = null;
-                }
+            // Set all states awaiting clear to false immediately
+            for (const id of this.stateTimers) {
+                this.clearTimeout(id);
+                this.stateTimers[id] = null;
                 await this.setStateAsync(id, false, true);
-            });
-
-            callback();
-        } catch (e) {
-            callback();
+            }
+            // Clear any other timers
+            for (const id of this.throttleTimers) {
+                this.clearTimeout(id);
+                this.throttleTimers[id] = null;
+            }
+        } catch (err) {
+            this.log.error(err);
         }
     }
 
@@ -282,7 +283,7 @@ class HikvisionAlarmserver extends utils.Adapter {
             await this.dumpFile(ctx, imageBuffer, fileName);
         }
 
-        if (this.config.sendToInstanceName) {
+        if (this.config.sendToInstanceName && this.sendToPassThrottle(ctx)) {
             const sendToArgs = [this.config.sendToInstanceName];
             if (this.config.sendToCommand) {
                 sendToArgs.push(this.config.sendToCommand);
@@ -300,6 +301,30 @@ class HikvisionAlarmserver extends utils.Adapter {
                 this.log.error('Failed in sendTo: ' + err);
             }
         }
+    }
+
+    sendToPassThrottle(ctx) {
+        // Let this pass by default
+        let pass = true;
+        if (!this.config.sendToThrottle) {
+            this.log.debug('No throttle configured');
+        } else {
+            const timerId = 'sendToThrottle' + (this.config.sendToThrottleByDevice ? ctx.device : '');
+            if (this.throttleTimers[timerId]) {
+                this.log.debug('Timer seems to be running, throttling message: ' + timerId);
+                pass = false;
+            } else {
+                this.log.debug('Setting message throttle timer: ' + timerId);
+                this.throttleTimers[timerId] = this.setTimeout(
+                    (timedOutId) => {
+                        this.log.debug('Throttle timer is done: ' + timedOutId);
+                        this.throttleTimers[timedOutId] = null;
+                    },
+                    this.config.sendToThrottle, timerId
+                );
+            }
+        }
+        return pass;
     }
 
     async handleXml(ctx, xmlBuffer) {
@@ -358,10 +383,10 @@ class HikvisionAlarmserver extends utils.Adapter {
             ('.' + ctx.eventType);
 
         // Cancel any existing timer for this state
-        if (ctx.stateId in this.timers) {
-            if (this.timers[ctx.stateId]) {
-                this.clearTimeout(this.timers[ctx.stateId]);
-                this.timers[ctx.stateId] = null;
+        if (ctx.stateId in this.stateTimers) {
+            if (this.stateTimers[ctx.stateId]) {
+                this.clearTimeout(this.stateTimers[ctx.stateId]);
+                this.stateTimers[ctx.stateId] = null;
             }
         } else {
             // Create device/channels/state if not there...
@@ -413,10 +438,10 @@ class HikvisionAlarmserver extends utils.Adapter {
         ctx.eventLogged = true;
 
         // ... and restart to clear (set false)
-        this.timers[ctx.stateId] = this.setTimeout(() => {
-            this.setState(ctx.stateId, false, true);
-            this.timers[ctx.stateId] = null;
-        }, this.config.alarmTimeout);
+        this.stateTimers[ctx.stateId] = this.setTimeout((stateId) => {
+            this.setState(stateId, false, true);
+            this.stateTimers[stateId] = null;
+        }, this.config.alarmTimeout, ctx.stateId);
     }
 
     async getDeviceName(device) {

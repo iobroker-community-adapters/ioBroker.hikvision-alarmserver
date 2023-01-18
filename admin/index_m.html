@@ -115,8 +115,8 @@
         </div>
 
         <div class="row">
-          <div class="col s12 m4 12 input-field">
-            <input type="text" class="value" id="alarmTimeout" />
+          <div class="col s12 input-field">
+            <input type="number" class="value" id="alarmTimeout" />
             <label for="alarmTimeout" class="translate">
               Alarm timeout (ms)
             </label>
@@ -164,9 +164,12 @@
             event XML and/or images to to other adapters (eg. Telegram, email,
             pushsafer, etc).
           </div>
+          <div class="col s12 translate">
+            This is only applies to complex (multipart) message types.
+          </div>
         </div>
         <div class="row">
-          <div class="col s6 input-field">
+          <div class="col s12 input-field">
             <input type="text" class="value" id="sendToInstanceName" />
             <label for="sendToInstanceName" class="translate">
               Send to instance name
@@ -175,7 +178,7 @@
           </div>
         </div>
         <div class="row">
-          <div class="col s6 input-field">
+          <div class="col s12 input-field">
             <input type="text" class="value" id="sendToCommand" />
             <label for="sendToCommand" class="translate">
               Send to command
@@ -183,7 +186,7 @@
           </div>
         </div>
         <div class="row">
-          <div class="col s6 input-field">
+          <div class="col s12 input-field">
             <input type="text" class="value" id="sendToMessage" />
             <label for="sendToMessage" class="translate">
               Send to message
@@ -198,6 +201,33 @@
             </span>
           </div>
         </div>
+
+        <div class="row">
+          <div class="col s12 input-field">
+            <input type="number" class="value" id="sendToThrottle" />
+            <label for="sendToThrottle" class="translate">
+              send to throttle (ms)
+            </label>
+            <br />
+            <span class="translate">
+              Skip sending unless at least this time has elapsed since last
+              message (time in milliseconds).<br />
+              Set to zero to disable.
+            </span>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col input-field">
+            <input type="checkbox" class="value" id="sendToThrottleByDevice" />
+            <span class="translate"> Throttle is on a per-device basis </span>
+            <br />
+            <span class="translate">
+              Uncheck to make minimum delay between sending a global condition
+              (ie. irrespective of source device).
+            </span>
+          </div>
+        </div>
       </div>
 
       <div id="tab-save">
@@ -206,15 +236,18 @@
             It is possible to save event XML and/or images (to the iobroker-data
             dirctory) for further processing/analysis/archiving/etc.
           </div>
+          <div class="col s12 translate">
+            This is only applies to complex (multipart) message types.
+          </div>
         </div>
         <div class="row">
-          <div class="col s6 input-field">
+          <div class="col s12 input-field">
             <input type="checkbox" class="value" id="saveXml" />
             <span class="translate">Save event XML</span>
           </div>
         </div>
         <div class="row">
-          <div class="col s6 input-field">
+          <div class="col s12 input-field">
             <input type="checkbox" class="value" id="saveImages" />
             <span class="translate">Save event images</span>
           </div>
