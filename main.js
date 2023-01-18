@@ -126,9 +126,7 @@ class HikvisionAlarmserver extends utils.Adapter {
             await fs.outputFile(fileName, data, 'binary');
         } catch (err) {
             this.log.error(err);
-            return false; // Error
         }
-        return true; // Success
     }
 
     isXmlPart(part) {
