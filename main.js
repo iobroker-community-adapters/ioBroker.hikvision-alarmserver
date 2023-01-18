@@ -156,16 +156,13 @@ class HikvisionAlarmserver extends utils.Adapter {
             }
         }
 
-        // Context for this event
-        const ctx = {
-            ts: new Date()
-        }
-        ctx.periodPath = ctx.ts.toISOString().substring(0, 10);
-
         const contentTypeHeader = 'content-type';
         if (!(contentTypeHeader in headers)) {
             this.log.error('No content type in header!');
         } else {
+            // Context for this event
+            const ctx = {};
+
             const contentType = headers[contentTypeHeader].toString().split(';')[0];
             switch (contentType) {
                 case 'application/xml':
@@ -187,7 +184,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                                 this.log.warn('Payload seem to have more than one XML part!');
                             } else {
                                 await this.handleXml(ctx, part.data);
-                                if (this.config.saveXml) {
+                                if (ctx.eventLogged && this.config.saveXml) {
                                     await this.dumpFile(ctx, part.data, ctx.fileBase + '.xml');
                                 }
                             }
@@ -209,6 +206,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                             }
                         }
                     }
+                    this.log.debug('Finished multipart: ' + JSON.stringify(ctx));
                     break;
 
                 default:
@@ -216,7 +214,6 @@ class HikvisionAlarmserver extends utils.Adapter {
                     break;
             }
         }
-        this.log.debug('Done: ' + JSON.stringify(ctx));
     }
 
     async handleJpegPart(ctx, part) {
@@ -363,6 +360,24 @@ class HikvisionAlarmserver extends utils.Adapter {
         } catch (err) {
             this.log.debug('No channelName found');
         }
+        // Use XML timestamp if we can
+        try {
+            ctx.ts = new Date(Date.parse(ctx.xml.EventNotificationAlert.dateTime[0]));
+        } catch (err) {
+            this.log.debug('No dateTime found - using new Date()');
+            ctx.ts = new Date();
+        }
+        // Add device & event type to base
+        ctx.periodPath =
+            ctx.ts.getFullYear().toString() +
+            (ctx.ts.getMonth() + 1).toString().padStart(2, '0') +
+            ctx.ts.getDate().toString().padStart(2, '0');
+
+        ctx.fileBase =
+            ctx.ts.getHours().toString().padStart(2, '0') +
+            ctx.ts.getMinutes().toString().padStart(2, '0') +
+            ctx.ts.getSeconds().toString().padStart(2, '0') +
+            ctx.ts.getMilliseconds().toString().padStart(3, '0');
 
         // Channel for state
         let channelName;
@@ -428,8 +443,7 @@ class HikvisionAlarmserver extends utils.Adapter {
             });
         }
 
-        // Stash derived data
-        ctx.fileBase = `${ctx.ts.getTime().toString(16)}-${ctx.device}-${ctx.eventType}`;
+        ctx.fileBase += `-${ctx.device}-${ctx.eventType}`;
 
         // Set it true (event in progress)
         this.log.debug('Triggering ' + ctx.stateId);
