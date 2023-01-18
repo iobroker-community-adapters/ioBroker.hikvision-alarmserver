@@ -124,6 +124,11 @@ class HikvisionAlarmserver extends utils.Adapter {
         this.log.debug(`Dumping ${data.length} bytes to ${fileName}`);
         try {
             await fs.outputFile(fileName, data, 'binary');
+            // Stash filename in ctx so it can possibly be used later (in sendTo?)
+            if (!Array.isArray(ctx.files)) {
+                ctx.files = [];
+            }
+            ctx.files.push(fileName);
         } catch (err) {
             this.log.error(err);
         }
@@ -182,7 +187,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                             } else {
                                 await this.handleXml(ctx, part.data);
                                 if (this.config.saveXml) {
-                                    this.dumpFile(ctx, part.data, ctx.fileBase + '.xml');
+                                    await this.dumpFile(ctx, part.data, ctx.fileBase + '.xml');
                                 }
                             }
                         }
@@ -198,7 +203,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                             // Now handle image parts
                             for (const part of parts) {
                                 if (this.isJpegPart(part)) {
-                                    this.handleJpegPart(ctx, part);
+                                    await this.handleJpegPart(ctx, part);
                                 }
                             }
                         }
@@ -210,6 +215,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                     break;
             }
         }
+        this.log.debug('Done: ' + JSON.stringify(ctx));
     }
 
     async handleJpegPart(ctx, part) {
@@ -226,7 +232,8 @@ class HikvisionAlarmserver extends utils.Adapter {
         const fileName = path.format(fileParts);
 
         // Load image now because we need dimensions to scale targetRect
-        const img = await Canvas.loadImage(part.data);
+        let imageBuffer = part.data;
+        const img = await Canvas.loadImage(imageBuffer);
 
         // See if there are any co-ordinates for target
         let targetRect;
@@ -246,7 +253,6 @@ class HikvisionAlarmserver extends utils.Adapter {
             this.log.warn('Could not find target x/y/width/height');
         }
 
-        let imageBuffer = part.data;
         if (targetRect) {
             // Draw target rectangle on image
             this.log.debug(`Drawing targetRect: ${targetRect} (${ctx.detectionTarget})`);
@@ -273,7 +279,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
 
         if (this.config.saveImages) {
-            this.dumpFile(ctx, imageBuffer, fileName);
+            await this.dumpFile(ctx, imageBuffer, fileName);
         }
 
         if (this.config.sendToInstanceName) {
@@ -289,7 +295,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                 // TODO: Add more items from ctx.
                 sendToArgs.push(this.sentToMessageFn(imageBuffer, ctx));
                 this.log.debug(JSON.stringify(sendToArgs).substring(0, 1024));
-                this.sendTo(...sendToArgs);
+                await this.sendToAsync(...sendToArgs);
             } catch (err) {
                 this.log.error('Failed in sendTo: ' + err);
             }
