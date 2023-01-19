@@ -118,6 +118,7 @@
     "useDetectionTargets": false,
     "alarmTimeout": 5000,
     "saveImages": false,
+    "annotateImages": true,
     "saveXml": false,
     "sendToInstanceName": "",
     "sendToCommand": "",

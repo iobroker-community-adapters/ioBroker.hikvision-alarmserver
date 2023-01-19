@@ -229,51 +229,77 @@ class HikvisionAlarmserver extends utils.Adapter {
         fileParts.base = fileParts.name + fileParts.ext;
         const fileName = path.format(fileParts);
 
-        // Load image now because we need dimensions to scale targetRect
+        // Default buffer is one passed in
         let imageBuffer = part.data;
-        const img = await Canvas.loadImage(imageBuffer);
 
-        // See if there are any co-ordinates for target
-        let targetRect;
-        try {
-            // These co-ordinates seem to be 'normalised' to 0-1000 on both axis
-            const xScale = img.width / 1000;
-            const yScale = img.height / 1000;
+        if (this.config.annotateImages) {
+            // See if there are any co-ordinates for target
+            let targetRect;
+            try {
 
-            const xmlTargetRect = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0];
-            targetRect = [
-                parseInt(xmlTargetRect.X[0]) * xScale,
-                parseInt(xmlTargetRect.Y[0]) * yScale,
-                parseInt(xmlTargetRect.width[0]) * xScale,
-                parseInt(xmlTargetRect.height[0]) * yScale
-            ];
-        } catch (err) {
-            this.log.warn('Could not find target x/y/width/height');
-        }
-
-        if (targetRect) {
-            // Draw target rectangle on image
-            this.log.debug(`Drawing targetRect: ${targetRect} (${ctx.detectionTarget})`);
-            const canvas = Canvas.createCanvas(img.width, img.height);
-            const cctx2d = canvas.getContext('2d')
-            cctx2d.drawImage(img, 0, 0);
-            cctx2d.strokeStyle = 'blue';
-            cctx2d.lineWidth = 4;
-            cctx2d.strokeRect(...targetRect);
-            if (ctx.detectionTarget) {
-                // Label rectangle
-                cctx2d.font = '24px sans-serif';
-                let metrics = cctx2d.measureText(ctx.detectionTarget);
-                this.log.debug(JSON.stringify(metrics));
-                cctx2d.fillStyle = 'blue'
-                cctx2d.fillRect(targetRect[0], targetRect[1],
-                    metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight + 2,
-                    metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent + 2);
-
-                cctx2d.fillStyle = 'black';
-                cctx2d.fillText(ctx.detectionTarget, targetRect[0], targetRect[1] + metrics.actualBoundingBoxAscent);
+                const xmlTargetRect = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0];
+                targetRect = [
+                    parseInt(xmlTargetRect.X[0]),
+                    parseInt(xmlTargetRect.Y[0]),
+                    parseInt(xmlTargetRect.width[0]),
+                    parseInt(xmlTargetRect.height[0])
+                ];
+            } catch (err) {
+                this.log.warn('Could not find target x/y/width/height');
             }
-            imageBuffer = canvas.toBuffer('image/jpeg');
+
+            if (targetRect) {
+                const img = await Canvas.loadImage(imageBuffer);
+
+                // XML co-ordinates seem to be 'normalised' to 0-1000 on both axis
+                const xScale = img.width / 1000;
+                const yScale = img.height / 1000;
+                
+                targetRect[0] *= xScale;
+                targetRect[1] *= yScale;
+                targetRect[2] *= xScale;
+                targetRect[3] *= yScale;
+
+                // Draw target rectangle on image
+                this.log.debug(`Drawing targetRect: ${targetRect} (${ctx.detectionTarget})`);
+
+                // TODO: maybe someday config
+                const labelLineStyle = 'orange';
+                const labelTextStyle = 'black';
+                const labelPadding = 4;
+                const lableTextRatio = 48;
+
+                const canvas = Canvas.createCanvas(img.width, img.height);
+                const cctx2d = canvas.getContext('2d')
+                cctx2d.drawImage(img, 0, 0);
+                cctx2d.strokeStyle = labelLineStyle;
+                cctx2d.lineWidth = labelPadding * 2;
+                cctx2d.strokeRect(...targetRect);
+                if (ctx.detectionTarget) {
+                    // Label rectangle
+                    cctx2d.font = Math.round(img.width / lableTextRatio) + 'px sans-serif';
+                    const metrics = cctx2d.measureText(ctx.detectionTarget);
+                    this.log.debug(JSON.stringify(metrics));
+                    const labelWidth = metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight + labelPadding * 2;
+                    const labelHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent + labelPadding * 2;
+                    let labelX = targetRect[0] - labelPadding;
+                    if (labelX + labelWidth > img.width) {
+                        // Shift label left so it fits in image
+                        labelX = img.width - labelWidth;
+                    }
+                    let labelY = targetRect[1] - labelHeight;
+                    if (labelY < 0) {
+                        // Draw label under box rather than above
+                        labelY = targetRect[1] + targetRect[3];
+                    }
+                    cctx2d.fillStyle = labelLineStyle;
+                    cctx2d.fillRect(labelX, labelY, labelWidth, labelHeight);
+
+                    cctx2d.fillStyle = labelTextStyle;
+                    cctx2d.fillText(ctx.detectionTarget, labelX + labelPadding, labelY + metrics.actualBoundingBoxAscent + labelPadding);
+                }
+                imageBuffer = canvas.toBuffer('image/jpeg');
+            }
         }
 
         if (this.config.saveImages) {
