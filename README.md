@@ -56,15 +56,34 @@ However, some events received include binary data such as images which would be 
 
 Configuration in this section can cause event data (configurable in the `Send to message` field) to be sent to the appropriate adapter.
 
-A simple example would be if the Telegram adapter has been installed, one could set the following parameters:
+##### Example 1: Telegram adapter
+
+A simple example would be if the Telegram adapter has been implemented, one could set the following parameters:
 
 * Send to instance name: `telegram.0`
 * Send to command: Leave blank
 * Send to message: `{ text: imageBuffer, type: 'photo' }`
 
-With this, each image received is sent on to the telegram adapter for direct distrubtion to users.
+With this, each image received is sent on to the telegram adapter for direct distribution to users.
 
-Using a modified configuration, images could be sent to email for example, or to a custom script (using Javascript adapter) for further processing.
+##### Example 2: Custom Javascript
+
+A more complex example is to send the image buffer to a custom script running inside a Javascript adapter:
+
+* Send to instance name: `javascript.0`
+* Send to command: `toScript` (this is not an example - the literal string is required).
+* Send to message: `{ script: 'script.js.myImageHandler', message: 'myImageReceiver', data: { device: ctx.device, image: imageBuffer } }`
+
+Inside the Javascript adapter (instance zero) create a script named `myImageHandler` and add this code:
+
+```javascript
+onMessage('myImageReceiver', (data, cb) => {
+  // data.device holds mac address of device (colons stripped).
+  // data.image holds raw image buffer.
+  ...
+  cb();
+});
+```
 
 #### Saving event data
 
