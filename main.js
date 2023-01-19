@@ -8,7 +8,7 @@ const fs = require('fs-extra');
 const path = require('node:path');
 const multipart = require('parse-multipart-data');
 
-const Canvas = require('canvas');
+const canvas = require('canvas');
 
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
@@ -249,11 +249,11 @@ class HikvisionAlarmserver extends utils.Adapter {
             }
 
             if (targetRect) {
-                const img = await Canvas.loadImage(imageBuffer);
+                const imgIn = await canvas.loadImage(imageBuffer);
 
                 // XML co-ordinates seem to be 'normalised' to 0-1000 on both axis
-                const xScale = img.width / 1000;
-                const yScale = img.height / 1000;
+                const xScale = imgIn.width / 1000;
+                const yScale = imgIn.height / 1000;
                 
                 targetRect[0] *= xScale;
                 targetRect[1] *= yScale;
@@ -269,36 +269,36 @@ class HikvisionAlarmserver extends utils.Adapter {
                 const labelPadding = 4;
                 const lableTextRatio = 48;
 
-                const canvas = Canvas.createCanvas(img.width, img.height);
-                const cctx2d = canvas.getContext('2d')
-                cctx2d.drawImage(img, 0, 0);
-                cctx2d.strokeStyle = labelLineStyle;
-                cctx2d.lineWidth = labelPadding * 2;
-                cctx2d.strokeRect(...targetRect);
+                const imgOut = canvas.createCanvas(imgIn.width, imgIn.height);
+                const context2d = imgOut.getContext('2d')
+                context2d.drawImage(imgIn, 0, 0);
+                context2d.strokeStyle = labelLineStyle;
+                context2d.lineWidth = labelPadding * 2;
+                context2d.strokeRect(...targetRect);
                 if (ctx.detectionTarget) {
                     // Label rectangle
-                    cctx2d.font = Math.round(img.width / lableTextRatio) + 'px sans-serif';
-                    const metrics = cctx2d.measureText(ctx.detectionTarget);
+                    context2d.font = Math.round(imgIn.width / lableTextRatio) + 'px sans-serif';
+                    const metrics = context2d.measureText(ctx.detectionTarget);
                     this.log.debug(JSON.stringify(metrics));
                     const labelWidth = metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight + labelPadding * 2;
                     const labelHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent + labelPadding * 2;
                     let labelX = targetRect[0] - labelPadding;
-                    if (labelX + labelWidth > img.width) {
+                    if (labelX + labelWidth > imgIn.width) {
                         // Shift label left so it fits in image
-                        labelX = img.width - labelWidth;
+                        labelX = imgIn.width - labelWidth;
                     }
                     let labelY = targetRect[1] - labelHeight;
                     if (labelY < 0) {
                         // Draw label under box rather than above
                         labelY = targetRect[1] + targetRect[3];
                     }
-                    cctx2d.fillStyle = labelLineStyle;
-                    cctx2d.fillRect(labelX, labelY, labelWidth, labelHeight);
+                    context2d.fillStyle = labelLineStyle;
+                    context2d.fillRect(labelX, labelY, labelWidth, labelHeight);
 
-                    cctx2d.fillStyle = labelTextStyle;
-                    cctx2d.fillText(ctx.detectionTarget, labelX + labelPadding, labelY + metrics.actualBoundingBoxAscent + labelPadding);
+                    context2d.fillStyle = labelTextStyle;
+                    context2d.fillText(ctx.detectionTarget, labelX + labelPadding, labelY + metrics.actualBoundingBoxAscent + labelPadding);
                 }
-                imageBuffer = canvas.toBuffer('image/jpeg');
+                imageBuffer = imgOut.toBuffer('image/jpeg');
             }
         }
 
