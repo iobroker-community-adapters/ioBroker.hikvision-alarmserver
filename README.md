@@ -5,7 +5,6 @@
 [![Downloads](https://img.shields.io/npm/dm/iobroker.hikvision-alarmserver.svg)](https://www.npmjs.com/package/iobroker.hikvision-alarmserver)
 ![Number of Installations](https://iobroker.live/badges/hikvision-alarmserver-installed.svg)
 ![Current version in stable repository](https://iobroker.live/badges/hikvision-alarmserver-stable.svg)
-[![Dependency Status](https://img.shields.io/david/raintonr/iobroker.hikvision-alarmserver.svg)](https://david-dm.org/raintonr/iobroker.hikvision-alarmserver)
 
 [![NPM](https://nodei.co/npm/iobroker.hikvision-alarmserver.png?downloads=true)](https://nodei.co/npm/iobroker.hikvision-alarmserver/)
 
