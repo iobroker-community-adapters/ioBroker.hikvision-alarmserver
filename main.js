@@ -346,7 +346,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         if (!this.config.sendToThrottle) {
             this.log.debug('No throttle configured');
         } else {
-            const timerId = 'sendToThrottle' + (this.config.sendToThrottleByDevice ? ctx.device : '');
+            const timerId = this.config.sendToThrottleByDevice ? ctx.device : 'global';
             if (this.throttleTimers[timerId]) {
                 this.log.debug('Timer seems to be running, throttling message: ' + timerId);
                 pass = false;
