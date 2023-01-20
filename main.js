@@ -17,6 +17,10 @@ const http = require('http');
 
 const bodyMaxLogLength = 256;
 
+// Duration after which we remove client from list of connections.
+// This is long because sometimes a camera can go for hours without issuing event.
+const activeConnectionTimeout = 60 * 60 * 24 * 1000;
+
 // TODO: awaiting release
 // const parseStringPromise = require('xml2js').parseStringPromise;
 
@@ -40,6 +44,7 @@ class HikvisionAlarmserver extends utils.Adapter {
 
         this.stateTimers = [];
         this.throttleTimers = [];
+        this.clientTimers = [];
         this.server = null;
     }
 
@@ -105,16 +110,25 @@ class HikvisionAlarmserver extends utils.Adapter {
                 this.log.info('Closed server');
             }
             // Set all states awaiting clear to false immediately
-            for (const id of this.stateTimers) {
-                this.clearTimeout(id);
-                this.stateTimers[id] = null;
+            for (const id in this.stateTimers) {
+                this.log.debug(`Clearing state ${id}`);
+                this.clearTimeout(this.stateTimers[id]);
+                delete this.stateTimers[id];
                 await this.setStateAsync(id, false, true);
             }
             // Clear any other timers
-            for (const id of this.throttleTimers) {
-                this.clearTimeout(id);
-                this.throttleTimers[id] = null;
+            for (const id in this.throttleTimers) {
+                this.log.debug(`Clearing throttle timer ${id}`);
+                this.clearTimeout(this.throttleTimers[id]);
+                delete this.throttleTimers[id];
             }
+            for (const device in this.clientTimers) {
+                this.log.debug(`Clearing connection timer ${device}`);
+                this.clearTimeout(this.clientTimers[device]);
+                delete this.clientTimers[device];
+            }
+            await this.updateConnected();
+            this.log.debug('Unload done');
         } catch (err) {
             this.log.error(err);
         }
@@ -254,7 +268,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                 // XML co-ordinates seem to be 'normalised' to 0-1000 on both axis
                 const xScale = imgIn.width / 1000;
                 const yScale = imgIn.height / 1000;
-                
+
                 targetRect[0] *= xScale;
                 targetRect[1] *= yScale;
                 targetRect[2] *= xScale;
@@ -332,7 +346,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         if (!this.config.sendToThrottle) {
             this.log.debug('No throttle configured');
         } else {
-            const timerId = 'sendToThrottle' + (this.config.sendToThrottleByDevice ? ctx.device : '');
+            const timerId = this.config.sendToThrottleByDevice ? ctx.device : 'global';
             if (this.throttleTimers[timerId]) {
                 this.log.debug('Timer seems to be running, throttling message: ' + timerId);
                 pass = false;
@@ -341,7 +355,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                 this.throttleTimers[timerId] = this.setTimeout(
                     (timedOutId) => {
                         this.log.debug('Throttle timer is done: ' + timedOutId);
-                        this.throttleTimers[timedOutId] = null;
+                        delete this.throttleTimers[timedOutId];
                     },
                     this.config.sendToThrottle, timerId
                 );
@@ -427,7 +441,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         if (ctx.stateId in this.stateTimers) {
             if (this.stateTimers[ctx.stateId]) {
                 this.clearTimeout(this.stateTimers[ctx.stateId]);
-                this.stateTimers[ctx.stateId] = null;
+                delete this.stateTimers[ctx.stateId];
             }
         } else {
             // Create device/channels/state if not there...
@@ -474,13 +488,17 @@ class HikvisionAlarmserver extends utils.Adapter {
         // Set it true (event in progress)
         this.log.debug('Triggering ' + ctx.stateId);
         await this.setStateChangedAsync(ctx.stateId, true, true);
+
         // Set eventLogged so upon return any other parts are processed too
         ctx.eventLogged = true;
+
+        // Successfully logged event so add this device to list of connected clients
+        this.clientConnected(ctx.device);
 
         // ... and restart to clear (set false)
         this.stateTimers[ctx.stateId] = this.setTimeout((stateId) => {
             this.setState(stateId, false, true);
-            this.stateTimers[stateId] = null;
+            delete this.stateTimers[stateId];
         }, this.config.alarmTimeout, ctx.stateId);
     }
 
@@ -498,6 +516,42 @@ class HikvisionAlarmserver extends utils.Adapter {
             }
         }
         return output;
+    }
+
+    async updateConnected() {
+        const deviceList = Object.keys(this.clientTimers);
+        // Nicer to show client names if we can find them
+        for (let lp = 0; lp < deviceList.length; lp++) {
+            deviceList[lp] = await this.getDeviceName(deviceList[lp]);
+        }
+        await this.setStateAsync(
+            'info.connection',
+            deviceList.length ? deviceList.join(',') : '',
+            true
+        );
+    }
+
+    clentDisconnected(device) {
+        delete this.clientTimers[device];
+        this.updateConnected();
+    }
+
+    clientConnected(device) {
+        let updateList = false;
+        if (this.clientTimers[device]) {
+            // Timer already running, clear it (will be restarted below).
+            this.clearTimeout(this.clientTimers[device]);
+            this.log.debug(`Existing client connection: ${device}`);
+        } else {
+            // New client - list will need updating.
+            updateList = true;
+            this.log.debug(`New client connection: ${device}`);
+        }
+        this.clientTimers[device] = this.setTimeout(this.clentDisconnected, activeConnectionTimeout, device);
+
+        if (updateList) {
+            this.updateConnected();
+        }
     }
 }
 
