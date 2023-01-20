@@ -4,12 +4,18 @@
  * Created with @iobroker/create-adapter v2.0.2
  */
 
+const fs = require('fs-extra');
+const path = require('node:path');
+const multipart = require('parse-multipart-data');
+
+const canvas = require('canvas');
+
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
 const http = require('http');
 
-const bodyMaxLogLength = 1536;
+const bodyMaxLogLength = 256;
 
 // TODO: awaiting release
 // const parseStringPromise = require('xml2js').parseStringPromise;
@@ -32,7 +38,8 @@ class HikvisionAlarmserver extends utils.Adapter {
         this.on('ready', this.onReady.bind(this));
         this.on('unload', this.onUnload.bind(this));
 
-        this.timers = [];
+        this.stateTimers = [];
+        this.throttleTimers = [];
         this.server = null;
     }
 
@@ -40,32 +47,36 @@ class HikvisionAlarmserver extends utils.Adapter {
      * Is called when databases are connected and adapter received configuration.
      */
     async onReady() {
+        this.dataDir = utils.getAbsoluteInstanceDataDir(this);
+        this.log.debug(JSON.stringify(this.config));
+        // Function used to construct messages for SendTo
+        this.sentToMessageFn = new Function('imageBuffer', 'ctx', `return ${this.config.sendToMessage};`);
+
         const that = this;
         try {
             this.server = http.createServer(function (request, response) {
                 if (request.method == 'POST') {
-                    that.log.debug('Request headers: ' + JSON.stringify(request.headers));
+                    that.log.debug(`Request ${request.url} headers: ${JSON.stringify(request.headers)}`);
 
-                    let body = '';
+                    const chunks = [];
                     request.on('data', function (data) {
-                        body += data;
+                        chunks.push(data);
                     });
                     request.on('end', async function () {
-                        const xmlObj = await that.decodePayload(request, body);
-
-                        if (xmlObj) {
-                            that.logEvent(xmlObj);
-                            // Success
-                            response.statusCode = 200;
-                        } else {
-                            that.log.warn('No event XML found in payload - ignoring');
-                            response.statusCode = 400;
+                        const body = Buffer.concat(chunks);
+                        that.log.debug(`Handling request of ${body.length} bytes`);
+                        if (that.log.level == 'silly') {
+                            // Dump requests for debugging
+                            that.dumpFile({ periodPath: '' }, body, 'lastRequest.txt');
                         }
+
+                        that.handlePayload(request.headers, body);
+                        response.statusCode == 200; // Always return success
                         response.end();
                     });
                 } else {
                     // Error
-                    that.log.warn('Received non-POST request - ignoring');
+                    that.log.warn(`Received non-POST request ${request.url}`);
                     response.statusCode = 400;
                     response.end();
                 }
@@ -85,148 +96,370 @@ class HikvisionAlarmserver extends utils.Adapter {
     }
 
     /**
-     * Is called when adapter shuts down - callback has to be called under any circumstances!
-     * @param {() => void} callback
+     * Is called when adapter shuts down
      */
-    async onUnload(callback) {
+    async onUnload() {
         try {
             if (this.server) {
                 this.server.close();
                 this.log.info('Closed server');
             }
-            /* Clear any timers and set all to false immediately */
-            Object.keys(this.timers).forEach(async (id) => {
-                if (this.timers[id]) {
-                    this.clearTimeout(this.timers[id]);
-                    this.timers[id] = null;
-                }
+            // Set all states awaiting clear to false immediately
+            for (const id of this.stateTimers) {
+                this.clearTimeout(id);
+                this.stateTimers[id] = null;
                 await this.setStateAsync(id, false, true);
-            });
-
-            callback();
-        } catch (e) {
-            callback();
+            }
+            // Clear any other timers
+            for (const id of this.throttleTimers) {
+                this.clearTimeout(id);
+                this.throttleTimers[id] = null;
+            }
+        } catch (err) {
+            this.log.error(err);
         }
     }
 
-    async decodePayload(request, body) {
-        if (body.length < bodyMaxLogLength) {
-            this.log.debug(body);
-        } else {
-            this.log.debug(`Body length of ${body.length} is too large to log, first ${bodyMaxLogLength} bytes follow:\n` +
-                body.substring(0, bodyMaxLogLength));
+    async dumpFile(ctx, data, name) {
+        const fileName = path.join(this.dataDir, ctx.periodPath, name);
+        this.log.debug(`Dumping ${data.length} bytes to ${fileName}`);
+        try {
+            await fs.outputFile(fileName, data, 'binary');
+            // Stash filename in ctx so it can possibly be used later (in sendTo?)
+            if (!Array.isArray(ctx.files)) {
+                ctx.files = [];
+            }
+            ctx.files.push(fileName);
+        } catch (err) {
+            this.log.error(err);
+        }
+    }
+
+    isXmlPart(part) {
+        // TODO: See if parse-multipart-data can be made to pull out XML type
+        // but until then, assume XML if no type and no filename.
+        return (part['type'] == 'application/xml' ||
+            (!('filename' in part) && !('type' in part)));
+    }
+
+    isJpegPart(part) {
+        return (part.type == 'image/jpeg');
+    }
+
+    async handlePayload(headers, body) {
+        if (this.log.level == 'silly') {
+            if (body.length < bodyMaxLogLength) {
+                this.log.debug(body);
+            } else {
+                this.log.debug(`Body length of ${body.length} is too large to log, first ${bodyMaxLogLength} bytes follow:\n` +
+                    body.toString().substring(0, bodyMaxLogLength));
+            }
         }
 
-        let xmlObj = null;
-
-        if (!('content-type' in request.headers)) {
-            this.log.error('No content-type in header!');
+        const contentTypeHeader = 'content-type';
+        if (!(contentTypeHeader in headers)) {
+            this.log.error('No content type in header!');
         } else {
-            let xmlString = null;
-            const contentTypeParts = request.headers['content-type'].split(';');
+            // Context for this event
+            const ctx = {};
 
-            if (contentTypeParts[0] == 'application/xml') {
-                // Payload was pure XML
-                xmlString = body;
-            } else if (contentTypeParts[0] == 'multipart/form-data') {
-                const boundaryRe = new RegExp(' boundary=(.*)');
-                const boundaryMatches = request.headers['content-type'].match(boundaryRe);
-                if (boundaryMatches && boundaryMatches.length) {
-                    const boundary = boundaryMatches[1];
+            const contentType = headers[contentTypeHeader].toString().split(';')[0];
+            switch (contentType) {
+                case 'application/xml':
+                    // Payload was pure XML
+                    await this.handleXml(ctx, body);
+                    break;
 
-                    // Couldn't get parse-multipart-data to work. Possible TODO: use that.
-                    // In the mean time, just pull out with a regexp
-                    const xmlRe = new RegExp(`--${boundary}.*Content-Length:\\s*\\d{1,}\\s*(<.*?)--${boundary}(--){0,1}`, 's');
-                    const xmlMatches = body.match(xmlRe);
-                    if (xmlMatches && xmlMatches.length) {
-                        xmlString = xmlMatches[1];
+                case 'multipart/form-data':
+                    const boundary = multipart.getBoundary(headers[contentTypeHeader]);
+                    const parts = multipart.parse(body, boundary);
+                    this.log.debug(`Found ${parts.length} parts`);
+
+                    // Find XML first so we can pull out other details later
+                    for (const part of parts) {
+                        this.log.debug('Part keys: ' + JSON.stringify(Object.keys(part)));
+                        if (this.isXmlPart(part)) {
+                            this.log.debug('This part is XML: ' + part.data);
+                            if (ctx.xml) {
+                                this.log.warn('Payload seem to have more than one XML part!');
+                            } else {
+                                await this.handleXml(ctx, part.data);
+                                if (ctx.eventLogged && this.config.saveXml) {
+                                    await this.dumpFile(ctx, part.data, ctx.fileBase + '.xml');
+                                }
+                            }
+                        }
+                    }
+
+                    // Only carry on if we've successfully logged the event above
+                    if (!ctx.eventLogged) {
+                        this.log.warn('Event logging failed - skipping other parts');
                     } else {
-                        this.log.error('Failed to extract XML from multipart payload (' + boundary + '): ' + body);
+                        if (!this.config.saveImages && this.config.sendToInstanceName == '') {
+                            this.log.debug('Skipping any image(s)');
+                        } else {
+                            // Now handle image parts
+                            for (const part of parts) {
+                                if (this.isJpegPart(part)) {
+                                    await this.handleJpegPart(ctx, part);
+                                }
+                            }
+                        }
                     }
-                } else {
-                    this.log.error('No boundary found in multipart header: ' + request.headers['content-type']);
-                }
-            } else {
-                this.log.error('Unhandled content-type: ' + request.headers['content-type']);
+                    this.log.debug('Finished multipart: ' + JSON.stringify(ctx));
+                    break;
+
+                default:
+                    this.log.error('Unhandled content type: ' + contentType);
+                    break;
+            }
+        }
+    }
+
+    async handleJpegPart(ctx, part) {
+        // Add .jpg to filename if not there
+        let fileParts = path.parse(part.filename);
+        if (fileParts.ext == '') {
+            fileParts.ext = '.jpg';
+        } else if (fileParts.ext != '.jpg' && fileParts.ext != '.jpeg') {
+            fileParts.ext += '.jpg';
+        }
+        // Prefix filename
+        fileParts.name = ctx.fileBase + '-' + fileParts.name;
+        fileParts.base = fileParts.name + fileParts.ext;
+        const fileName = path.format(fileParts);
+
+        // Default buffer is one passed in
+        let imageBuffer = part.data;
+
+        if (this.config.annotateImages) {
+            // See if there are any co-ordinates for target
+            let targetRect;
+            try {
+
+                const xmlTargetRect = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0];
+                targetRect = [
+                    parseInt(xmlTargetRect.X[0]),
+                    parseInt(xmlTargetRect.Y[0]),
+                    parseInt(xmlTargetRect.width[0]),
+                    parseInt(xmlTargetRect.height[0])
+                ];
+            } catch (err) {
+                this.log.warn('Could not find target x/y/width/height');
             }
 
-            if (xmlString) {
-                try {
-                    xmlObj = await parseStringPromise(xmlString);
-                    if (!xmlObj) {
-                        this.log.error('Parse returned null XML');
+            if (targetRect) {
+                const imgIn = await canvas.loadImage(imageBuffer);
+
+                // XML co-ordinates seem to be 'normalised' to 0-1000 on both axis
+                const xScale = imgIn.width / 1000;
+                const yScale = imgIn.height / 1000;
+                
+                targetRect[0] *= xScale;
+                targetRect[1] *= yScale;
+                targetRect[2] *= xScale;
+                targetRect[3] *= yScale;
+
+                // Draw target rectangle on image
+                this.log.debug(`Drawing targetRect: ${targetRect} (${ctx.detectionTarget})`);
+
+                // TODO: maybe someday config
+                const labelLineStyle = 'orange';
+                const labelTextStyle = 'black';
+                const labelPadding = 4;
+                const lableTextRatio = 48;
+
+                const imgOut = canvas.createCanvas(imgIn.width, imgIn.height);
+                const context2d = imgOut.getContext('2d')
+                context2d.drawImage(imgIn, 0, 0);
+                context2d.strokeStyle = labelLineStyle;
+                context2d.lineWidth = labelPadding * 2;
+                context2d.strokeRect(...targetRect);
+                if (ctx.detectionTarget) {
+                    // Label rectangle
+                    context2d.font = Math.round(imgIn.width / lableTextRatio) + 'px sans-serif';
+                    const metrics = context2d.measureText(ctx.detectionTarget);
+                    this.log.debug(JSON.stringify(metrics));
+                    const labelWidth = metrics.actualBoundingBoxLeft + metrics.actualBoundingBoxRight + labelPadding * 2;
+                    const labelHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent + labelPadding * 2;
+                    let labelX = targetRect[0] - labelPadding;
+                    if (labelX + labelWidth > imgIn.width) {
+                        // Shift label left so it fits in image
+                        labelX = imgIn.width - labelWidth;
                     }
-                } catch (err) {
-                    this.log.error('Error parsing body: ' + err);
+                    let labelY = targetRect[1] - labelHeight;
+                    if (labelY < 0) {
+                        // Draw label under box rather than above
+                        labelY = targetRect[1] + targetRect[3];
+                    }
+                    context2d.fillStyle = labelLineStyle;
+                    context2d.fillRect(labelX, labelY, labelWidth, labelHeight);
+
+                    context2d.fillStyle = labelTextStyle;
+                    context2d.fillText(ctx.detectionTarget, labelX + labelPadding, labelY + metrics.actualBoundingBoxAscent + labelPadding);
                 }
-            } else {
-                this.log.error('Could not find XML message in payload');
+                imageBuffer = imgOut.toBuffer('image/jpeg');
             }
         }
 
-        return xmlObj;
+        if (this.config.saveImages) {
+            await this.dumpFile(ctx, imageBuffer, fileName);
+        }
+
+        if (this.config.sendToInstanceName && this.sendToPassThrottle(ctx)) {
+            const sendToArgs = [this.config.sendToInstanceName];
+            if (this.config.sendToCommand) {
+                sendToArgs.push(this.config.sendToCommand);
+            }
+            this.log.debug('sendTo: ' + sendToArgs);
+
+            try {
+                // sendToMessage config is a code snipped string that evaluates to the message to send.
+                // Available variables passed into this code snippet string are simply 'imageBuffer'.
+                // TODO: Add more items from ctx.
+                sendToArgs.push(this.sentToMessageFn(imageBuffer, ctx));
+                this.log.debug(JSON.stringify(sendToArgs).substring(0, 1024));
+                await this.sendToAsync(...sendToArgs);
+            } catch (err) {
+                this.log.error('Failed in sendTo: ' + err);
+            }
+        }
     }
 
-    async logEvent(xml) {
-        let macAddress = null;
-        let eventType = null;
+    sendToPassThrottle(ctx) {
+        // Let this pass by default
+        let pass = true;
+        if (!this.config.sendToThrottle) {
+            this.log.debug('No throttle configured');
+        } else {
+            const timerId = 'sendToThrottle' + (this.config.sendToThrottleByDevice ? ctx.device : '');
+            if (this.throttleTimers[timerId]) {
+                this.log.debug('Timer seems to be running, throttling message: ' + timerId);
+                pass = false;
+            } else {
+                this.log.debug('Setting message throttle timer: ' + timerId);
+                this.throttleTimers[timerId] = this.setTimeout(
+                    (timedOutId) => {
+                        this.log.debug('Throttle timer is done: ' + timedOutId);
+                        this.throttleTimers[timedOutId] = null;
+                    },
+                    this.config.sendToThrottle, timerId
+                );
+            }
+        }
+        return pass;
+    }
+
+    async handleXml(ctx, xmlBuffer) {
+        try {
+            ctx.xml = await parseStringPromise(new String(xmlBuffer));
+            if (!ctx.xml) {
+                this.log.error('Parse returned null XML');
+            } else {
+                await this.logXmlEvent(ctx);
+            }
+        } catch (err) {
+            this.log.error('Error parsing XML: ' + err);
+        }
+    }
+
+    async logXmlEvent(ctx) {
         try {
             // This is inside a try...catch so we handle case when XML was bad.
             // TODO: make object names configurable? Mac? IP? etc.
-            macAddress = xml.EventNotificationAlert.macAddress[0];
-            eventType = xml.EventNotificationAlert.eventType[0];
+            ctx.macAddress = ctx.xml.EventNotificationAlert.macAddress[0];
+            ctx.eventType = ctx.xml.EventNotificationAlert.eventType[0];
         } catch (err) {
             this.log.error('Bad request - failed to find required XML attributes');
+            // We cannot carry on...
             return;
         }
-
+        // detection Target is optional
+        try {
+            ctx.detectionTarget = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].detectionTarget[0];
+        } catch (err) {
+            this.log.debug('No detectionTarget found');
+        }
         // Channel name is optional
-        const channelName = this.config.useChannels && xml.EventNotificationAlert?.channelName ?
-            xml.EventNotificationAlert.channelName[0] : null;
+        try {
+            ctx.channelName = ctx.xml.EventNotificationAlert.channelName[0];
+        } catch (err) {
+            this.log.debug('No channelName found');
+        }
+        // Use XML timestamp if we can
+        try {
+            ctx.ts = new Date(Date.parse(ctx.xml.EventNotificationAlert.dateTime[0]));
+        } catch (err) {
+            this.log.debug('No dateTime found - using new Date()');
+            ctx.ts = new Date();
+        }
+        // Add device & event type to base
+        ctx.periodPath =
+            ctx.ts.getFullYear().toString() +
+            (ctx.ts.getMonth() + 1).toString().padStart(2, '0') +
+            ctx.ts.getDate().toString().padStart(2, '0');
+
+        ctx.fileBase =
+            ctx.ts.getHours().toString().padStart(2, '0') +
+            ctx.ts.getMinutes().toString().padStart(2, '0') +
+            ctx.ts.getSeconds().toString().padStart(2, '0') +
+            ctx.ts.getMilliseconds().toString().padStart(3, '0');
+
+        // Channel for state
+        let channelName;
+        if (this.config.useDetectionTargets && ctx.detectionTarget) {
+            if (this.config.useChannels && ctx.channelName) {
+                channelName = ctx.channelName + '.' + ctx.detectionTarget;
+            } else {
+                channelName = ctx.detectionTarget;
+            }
+        } else if (this.config.useChannels && ctx.channelName) {
+            channelName = ctx.channelName;
+        }
 
         // Strip colons from ID to be consistent with net-tools
-        const device = String(macAddress).replace(/:/g, '');
-        const stateId = device +
-            (channelName != null ? '.' + channelName : '') +
-            ('.' + eventType);
+        ctx.device = String(ctx.macAddress).replace(/:/g, '');
+        ctx.stateId = ctx.device +
+            (channelName ? '.' + channelName : '') +
+            ('.' + ctx.eventType);
 
         // Cancel any existing timer for this state
-        if (stateId in this.timers) {
-            if (this.timers[stateId]) {
-                this.clearTimeout(this.timers[stateId]);
-                this.timers[stateId] = null;
+        if (ctx.stateId in this.stateTimers) {
+            if (this.stateTimers[ctx.stateId]) {
+                this.clearTimeout(this.stateTimers[ctx.stateId]);
+                this.stateTimers[ctx.stateId] = null;
             }
         } else {
             // Create device/channels/state if not there...
             // ... which will only be attempted if not in timers as if this ID is in the
             // timers object we must have already seen it and created the state.
 
-            this.log.debug('Creating device ' + device);
+            this.log.debug('Creating device ' + ctx.device);
             const native = {
-                mac: macAddress
+                mac: ctx.macAddress
             };
             // Add optional parts
-            if (xml.EventNotificationAlert?.ipAddress) {
-                native.ipAddress = xml.EventNotificationAlert.ipAddress[0];
+            if (ctx.xml.EventNotificationAlert?.ipAddress) {
+                native.ipAddress = ctx.xml.EventNotificationAlert.ipAddress[0];
             }
-            await this.setObjectNotExistsAsync(device, {
+            await this.setObjectNotExistsAsync(ctx.device, {
                 type: 'device',
                 common: {
-                    name: await this.getDeviceName(device)
+                    name: await this.getDeviceName(ctx.device)
                 },
                 native: native
             });
 
             if (channelName != null) {
                 this.log.debug('Creating channel ' + channelName);
-                await this.createChannelAsync(device, channelName);
+                await this.createChannelAsync(ctx.device, channelName);
             }
 
-            this.log.debug('Creating state ' + stateId);
-            await this.setObjectNotExistsAsync(stateId, {
+            this.log.debug('Creating state ' + ctx.stateId);
+            await this.setObjectNotExistsAsync(ctx.stateId, {
                 type: 'state',
                 common: {
-                    name: eventType,
+                    name: ctx.eventType,
                     type: 'boolean',
                     role: 'indicator',
                     read: true,
@@ -236,14 +469,19 @@ class HikvisionAlarmserver extends utils.Adapter {
             });
         }
 
-        // Set it true (event in progress)
-        await this.setStateChangedAsync(stateId, true, true);
+        ctx.fileBase += `-${ctx.device}-${ctx.eventType}`;
 
-        // ... and restart to clear (set false) after 5s
-        this.timers[stateId] = this.setTimeout(() => {
+        // Set it true (event in progress)
+        this.log.debug('Triggering ' + ctx.stateId);
+        await this.setStateChangedAsync(ctx.stateId, true, true);
+        // Set eventLogged so upon return any other parts are processed too
+        ctx.eventLogged = true;
+
+        // ... and restart to clear (set false)
+        this.stateTimers[ctx.stateId] = this.setTimeout((stateId) => {
             this.setState(stateId, false, true);
-            this.timers[stateId] = null;
-        }, this.config.alarmTimeout);
+            this.stateTimers[stateId] = null;
+        }, this.config.alarmTimeout, ctx.stateId);
     }
 
     async getDeviceName(device) {
