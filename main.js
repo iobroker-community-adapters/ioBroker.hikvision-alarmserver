@@ -250,13 +250,13 @@ class HikvisionAlarmserver extends utils.Adapter {
             // See if there are any co-ordinates for target
             let targetRect;
             try {
-
                 const xmlTargetRect = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].TargetRect[0];
                 targetRect = [
-                    parseInt(xmlTargetRect.X[0]),
-                    parseInt(xmlTargetRect.Y[0]),
-                    parseInt(xmlTargetRect.width[0]),
-                    parseInt(xmlTargetRect.height[0])
+                    // Sometimes ints but sometimes floats, so parse the latter (see below).
+                    parseFloat(xmlTargetRect.X[0]),
+                    parseFloat(xmlTargetRect.Y[0]),
+                    parseFloat(xmlTargetRect.width[0]),
+                    parseFloat(xmlTargetRect.height[0])
                 ];
             } catch (err) {
                 this.log.warn('Could not find target x/y/width/height');
@@ -265,10 +265,15 @@ class HikvisionAlarmserver extends utils.Adapter {
             if (targetRect) {
                 const imgIn = await canvas.loadImage(imageBuffer);
 
-                // XML co-ordinates seem to be 'normalised' to 0-1000 on both axis
-                const xScale = imgIn.width / 1000;
-                const yScale = imgIn.height / 1000;
-
+                let xScale = imgIn.width;
+                let yScale = imgIn.height;
+                // XML TargetRect co-ordinates seem to be sometimes be 0-1000 but sometimes 0-1 (float).
+                // If everything is <= 1 assume 0-1 (float) which means scales will already be good.
+                // If not, divide scales by 1000;
+                if (targetRect[0] > 1 || targetRect[1] > 1 || targetRect[2] > 1 || targetRect[3] > 1) {
+                    xScale /= 1000;
+                    yScale /= 1000;
+                }
                 targetRect[0] *= xScale;
                 targetRect[1] *= yScale;
                 targetRect[2] *= xScale;
