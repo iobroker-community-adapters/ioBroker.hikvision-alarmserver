@@ -127,5 +127,26 @@
     "sendToThrottleByDevice": true
   },
   "objects": [],
-  "instanceObjects": []
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "info.clients",
+        "name": "List of connected clients",
+        "type": "string",
+        "read": true,
+        "write": false
+      },
+      "native": {}
+    }
+  ]
 }
