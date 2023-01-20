@@ -520,6 +520,10 @@ class HikvisionAlarmserver extends utils.Adapter {
 
     async updateConnected() {
         const deviceList = Object.keys(this.clientTimers);
+        // Nicer to show client names if we can find them
+        for (let lp = 0; lp < deviceList.length; lp++) {
+            deviceList[lp] = await this.getDeviceName(deviceList[lp]);
+        }
         await this.setStateAsync(
             'info.connection',
             deviceList.length ? deviceList.join(',') : '',
