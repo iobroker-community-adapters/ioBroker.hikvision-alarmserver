@@ -113,14 +113,14 @@ class HikvisionAlarmserver extends utils.Adapter {
             for (const id in this.stateTimers) {
                 this.log.debug(`Clearing state ${id}`);
                 this.clearTimeout(this.stateTimers[id]);
-                this.stateTimers[id] = null;
+                delete this.stateTimers[id];
                 await this.setStateAsync(id, false, true);
             }
             // Clear any other timers
             for (const id in this.throttleTimers) {
                 this.log.debug(`Clearing throttle timer ${id}`);
                 this.clearTimeout(this.throttleTimers[id]);
-                this.throttleTimers[id] = null;
+                delete this.throttleTimers[id];
             }
             for (const device in this.clientTimers) {
                 this.log.debug(`Clearing connection timer ${device}`);
@@ -355,7 +355,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                 this.throttleTimers[timerId] = this.setTimeout(
                     (timedOutId) => {
                         this.log.debug('Throttle timer is done: ' + timedOutId);
-                        this.throttleTimers[timedOutId] = null;
+                        delete this.throttleTimers[timedOutId];
                     },
                     this.config.sendToThrottle, timerId
                 );
@@ -441,7 +441,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         if (ctx.stateId in this.stateTimers) {
             if (this.stateTimers[ctx.stateId]) {
                 this.clearTimeout(this.stateTimers[ctx.stateId]);
-                this.stateTimers[ctx.stateId] = null;
+                delete this.stateTimers[ctx.stateId];
             }
         } else {
             // Create device/channels/state if not there...
@@ -498,7 +498,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         // ... and restart to clear (set false)
         this.stateTimers[ctx.stateId] = this.setTimeout((stateId) => {
             this.setState(stateId, false, true);
-            this.stateTimers[stateId] = null;
+            delete this.stateTimers[stateId];
         }, this.config.alarmTimeout, ctx.stateId);
     }
 
