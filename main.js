@@ -55,22 +55,31 @@ class HikvisionAlarmserver extends utils.Adapter {
     async onReady() {
         this.dataDir = utils.getAbsoluteInstanceDataDir(this);
         this.log.debug(JSON.stringify(this.config));
-        // Functions used to construct messages for SendTo
-        this.sendXmlConfig = {
-            type: 'xml',
-            instance: this.config.sendXmlInstance,
-            command: this.config.sendXmlCommand,
-            messageFn: new Function('imageBuffer', 'ctx', `return ${this.config.sendXmlMessage};`),
-            throttle: this.config.sendXmlThrottle,
-            throttleByDevice: this.config.sendXmlThrottleByDevice
+
+        // Create send config, catching any errors (could be caused by Function)
+        try {
+            this.sendXmlConfig = {
+                type: 'xml',
+                instance: this.config.sendXmlInstance,
+                command: this.config.sendXmlCommand,
+                messageFn: new Function('imageBuffer', 'ctx', `return ${this.config.sendXmlMessage};`),
+                throttle: this.config.sendXmlThrottle,
+                throttleByDevice: this.config.sendXmlThrottleByDevice
+            }
+        } catch (err) {
+            this.log.error('Failed to create sendXmlConfig - Send to message for XML is likely malformed: ' + err);
         }
-        this.sendImageConfig = {
-            type: 'image',
-            instance: this.config.sendImageInstance,
-            command: this.config.sendImageCommand,
-            messageFn: new Function('imageBuffer', 'ctx', `return ${this.config.sendImageMessage};`),
-            throttle: this.config.sendImageThrottle,
-            throttleByDevice: this.config.sendImageThrottleByDevice
+        try {
+            this.sendImageConfig = {
+                type: 'image',
+                instance: this.config.sendImageInstance,
+                command: this.config.sendImageCommand,
+                messageFn: new Function('imageBuffer', 'ctx', `return ${this.config.sendImageMessage};`),
+                throttle: this.config.sendImageThrottle,
+                throttleByDevice: this.config.sendImageThrottleByDevice
+            }
+        } catch (err) {
+            this.log.error('Failed to create sendImageConfig - Send to message for images is likely malformed: ' + err);          
         }
 
         const that = this;
@@ -222,7 +231,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                     if (!ctx.eventLogged) {
                         this.log.warn('Event logging failed - skipping other parts');
                     } else {
-                        if (!this.config.saveImages && this.sendImageConfig.instance == '') {
+                        if (!this.config.saveImages && this.sendImageConfig?.instance) {
                             this.log.debug('Skipping any image(s) as no save/send enabled');
                         } else {
                             // Now handle image parts
@@ -342,7 +351,7 @@ class HikvisionAlarmserver extends utils.Adapter {
     }
 
     async checkAndSendTo(sendTarget, ctx, imageBuffer) {
-        if (sendTarget.instance && this.sendToPassThrottle(sendTarget, ctx)) {
+        if (sendTarget?.instance && this.sendToPassThrottle(sendTarget, ctx)) {
             const sendToArgs = [sendTarget.instance];
             if (sendTarget.command) {
                 sendToArgs.push(sendTarget.command);
