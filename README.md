@@ -53,21 +53,29 @@ Some event types received have a simple boolean on/off (duration, VMD, etc). For
 
 However, some events received include binary data such as images which would be impractical to constantly store in the ioBroker object tree. A more graceful mechanism to handle such events it to use ioBroker's inbuilt messaging system which allows message objects to be communicated between adapters.
 
-Configuration in this section can cause event data (configurable in the `Send to message` field) to be sent to the appropriate adapter.
+While this function is designed mainly for images, sending triggered by simple XML parts is also supported.
 
-##### Example 1: Telegram adapter
+The exact message sent is configurable in the `Send to message...` fields. These fields are evaluated with the JavaScript `Function` object and have two variables available: `ctx` (the event context object - see below) and in the case of image parts the raw buffer is available in `imageBuffer`.
 
-A simple example would be if the Telegram adapter has been implemented, one could set the following parameters:
+##### Example 1: Send textual alert on every event received via Telegram
 
-* Send to instance name: `telegram.0`
-* Send to command: Leave blank
-* Send to message: `{ text: imageBuffer, type: 'photo' }`
+If the Telegram adapter has been implemented, one could set the following parameters in the `XML event parts` section:
 
-With this, each image received is sent on to the telegram adapter for direct distribution to users.
+* Send to instance for XML: `telegram.0`
+* Send to command for XML: Leave blank
+* Send to message for XML: Note backticks are part of configured value - `` `Received ${ctx.eventType} from ${ctx.deviceName}` ``
 
-##### Example 2: Custom Javascript
+##### Example 2: Send images via Telegram
 
-A more complex example is to send the image buffer to a custom script running inside a Javascript adapter:
+If the Telegram adapter has been implemented, one could set the following parameters in the `Image event parts` section:
+
+* Send to instance for images: `telegram.0`
+* Send to command for images: Leave blank
+* Send to message for images: `{ text: imageBuffer, type: 'photo' }`
+
+##### Example 3: Send images to custom Javascript
+
+A more complex example is to send each image buffer received to a custom script running inside a Javascript adapter:
 
 * Send to instance name: `javascript.0`
 * Send to command: `toScript` (this is not an example - the literal string is required).
@@ -83,6 +91,25 @@ onMessage('myImageReceiver', (data, cb) => {
   cb();
 });
 ```
+
+##### Event context object
+
+The `ctx` event context has the following properties:
+
+- `macAddress`
+- `eventType`
+- `detectionTarget`
+- `channelName`
+- `device` - MAC address with quotes stripped (for consistency with net-tools).
+- `deviceName` - Hostname derived from net-tools or copy of `device` if not found.
+- `stateId` - State ID this event triggers.
+- `eventLogged` - Boolean indicating a state was properly triggered. Should always be true.
+- `xml` - Parsed XML data.
+- `ts` - JavaScript `Date` object created from `dateTime` in event message (or time event was receive if not available).
+- `periodPath` - Filesystem folder where event parts are currently being saved (changes each day).
+- `fileBase` - Prefix for all saved parts from the current message.
+- `files` - Array holding filenames (including full path) of all files dumped as part of processing of the current message.
+
 
 #### Saving event data
 
