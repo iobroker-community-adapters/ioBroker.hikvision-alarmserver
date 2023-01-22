@@ -77,7 +77,7 @@
                     "type": "text",
                     "trim": false,
                     "label": "Send to message for XML",
-                    "help": "JS code to construct the message object to send.<br/>Eg. to send images to Telegram use, <i>`Received ${ctx.eventType} from ${ctx.deviceName}`</i>.<br/>Event details are available in the <i>ctx</i> variable (event context).",
+                    "help": "JS code to construct the message object to send.<br/>Eg. to send a simple text message to Telegram use, <i>`Received ${ctx.eventType} from ${ctx.deviceName}`</i>.<br/>Event details are available in the <i>ctx</i> variable (event context).",
                     "sm": 12,
                     "hidden": "data.sendXmlInstance == ''",
                     "validator": "data.sendXMLInstance == '' || data.sendXmlMessage != ''",
