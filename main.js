@@ -45,6 +45,7 @@ class HikvisionAlarmserver extends utils.Adapter {
         this.stateTimers = [];
         this.throttleTimers = [];
         this.clientTimers = [];
+        this.deviceNameCache = [];
         this.server = null;
     }
 
@@ -54,8 +55,32 @@ class HikvisionAlarmserver extends utils.Adapter {
     async onReady() {
         this.dataDir = utils.getAbsoluteInstanceDataDir(this);
         this.log.debug(JSON.stringify(this.config));
-        // Function used to construct messages for SendTo
-        this.sentToMessageFn = new Function('imageBuffer', 'ctx', `return ${this.config.sendToMessage};`);
+
+        // Create send config, catching any errors (could be caused by Function)
+        try {
+            this.sendXmlConfig = {
+                type: 'xml',
+                instance: this.config.sendXmlInstance,
+                command: this.config.sendXmlCommand,
+                messageFn: new Function('imageBuffer', 'ctx', `return ${this.config.sendXmlMessage};`),
+                throttle: this.config.sendXmlThrottle,
+                throttleByDevice: this.config.sendXmlThrottleByDevice
+            }
+        } catch (err) {
+            this.log.error('Failed to create sendXmlConfig - Send to message for XML is likely malformed: ' + err);
+        }
+        try {
+            this.sendImageConfig = {
+                type: 'image',
+                instance: this.config.sendImageInstance,
+                command: this.config.sendImageCommand,
+                messageFn: new Function('imageBuffer', 'ctx', `return ${this.config.sendImageMessage};`),
+                throttle: this.config.sendImageThrottle,
+                throttleByDevice: this.config.sendImageThrottleByDevice
+            }
+        } catch (err) {
+            this.log.error('Failed to create sendImageConfig - Send to message for images is likely malformed: ' + err);          
+        }
 
         const that = this;
         try {
@@ -198,9 +223,6 @@ class HikvisionAlarmserver extends utils.Adapter {
                                 this.log.warn('Payload seem to have more than one XML part!');
                             } else {
                                 await this.handleXml(ctx, part.data);
-                                if (ctx.eventLogged && this.config.saveXml) {
-                                    await this.dumpFile(ctx, part.data, ctx.fileBase + '.xml');
-                                }
                             }
                         }
                     }
@@ -209,8 +231,8 @@ class HikvisionAlarmserver extends utils.Adapter {
                     if (!ctx.eventLogged) {
                         this.log.warn('Event logging failed - skipping other parts');
                     } else {
-                        if (!this.config.saveImages && this.config.sendToInstanceName == '') {
-                            this.log.debug('Skipping any image(s)');
+                        if (!this.config.saveImages && this.sendImageConfig?.instance) {
+                            this.log.debug('Skipping any image(s) as no save/send enabled');
                         } else {
                             // Now handle image parts
                             for (const part of parts) {
@@ -325,10 +347,14 @@ class HikvisionAlarmserver extends utils.Adapter {
             await this.dumpFile(ctx, imageBuffer, fileName);
         }
 
-        if (this.config.sendToInstanceName && this.sendToPassThrottle(ctx)) {
-            const sendToArgs = [this.config.sendToInstanceName];
-            if (this.config.sendToCommand) {
-                sendToArgs.push(this.config.sendToCommand);
+        await this.checkAndSendTo(this.sendImageConfig, ctx, imageBuffer);
+    }
+
+    async checkAndSendTo(sendTarget, ctx, imageBuffer) {
+        if (sendTarget?.instance && this.sendToPassThrottle(sendTarget, ctx)) {
+            const sendToArgs = [sendTarget.instance];
+            if (sendTarget.command) {
+                sendToArgs.push(sendTarget.command);
             }
             this.log.debug('sendTo: ' + sendToArgs);
 
@@ -336,7 +362,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                 // sendToMessage config is a code snipped string that evaluates to the message to send.
                 // Available variables passed into this code snippet string are simply 'imageBuffer'.
                 // TODO: Add more items from ctx.
-                sendToArgs.push(this.sentToMessageFn(imageBuffer, ctx));
+                sendToArgs.push(sendTarget.messageFn(imageBuffer, ctx));
                 this.log.debug(JSON.stringify(sendToArgs).substring(0, 1024));
                 await this.sendToAsync(...sendToArgs);
             } catch (err) {
@@ -345,13 +371,16 @@ class HikvisionAlarmserver extends utils.Adapter {
         }
     }
 
-    sendToPassThrottle(ctx) {
+    sendToPassThrottle(sendTarget, ctx) {
         // Let this pass by default
         let pass = true;
-        if (!this.config.sendToThrottle) {
-            this.log.debug('No throttle configured');
+        if (!sendTarget.throttle) {
+            this.log.debug(`No throttle for ${sendTarget.type}`);
         } else {
-            const timerId = this.config.sendToThrottleByDevice ? ctx.device : 'global';
+            let timerId = sendTarget.type;
+            if (sendTarget.throttleByDevice) {
+                timerId += ctx.device;
+            }
             if (this.throttleTimers[timerId]) {
                 this.log.debug('Timer seems to be running, throttling message: ' + timerId);
                 pass = false;
@@ -362,7 +391,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                         this.log.debug('Throttle timer is done: ' + timedOutId);
                         delete this.throttleTimers[timedOutId];
                     },
-                    this.config.sendToThrottle, timerId
+                    sendTarget.throttle, timerId
                 );
             }
         }
@@ -372,13 +401,16 @@ class HikvisionAlarmserver extends utils.Adapter {
     async handleXml(ctx, xmlBuffer) {
         try {
             ctx.xml = await parseStringPromise(new String(xmlBuffer));
-            if (!ctx.xml) {
-                this.log.error('Parse returned null XML');
-            } else {
-                await this.logXmlEvent(ctx);
-            }
         } catch (err) {
             this.log.error('Error parsing XML: ' + err);
+        }
+        if (!ctx.xml) {
+            this.log.error('Parse returned null XML');
+        } else {
+            await this.logXmlEvent(ctx);
+            if (ctx.eventLogged && this.config.saveXml) {
+                await this.dumpFile(ctx, xmlBuffer, ctx.fileBase + '.xml');
+            }
         }
     }
 
@@ -438,6 +470,7 @@ class HikvisionAlarmserver extends utils.Adapter {
 
         // Strip colons from ID to be consistent with net-tools
         ctx.device = String(ctx.macAddress).replace(/:/g, '');
+        ctx.deviceName = await this.getDeviceName(ctx.device);
         ctx.stateId = ctx.device +
             (channelName ? '.' + channelName : '') +
             ('.' + ctx.eventType);
@@ -464,7 +497,7 @@ class HikvisionAlarmserver extends utils.Adapter {
             await this.setObjectNotExistsAsync(ctx.device, {
                 type: 'device',
                 common: {
-                    name: await this.getDeviceName(ctx.device)
+                    name: ctx.deviceName
                 },
                 native: native
             });
@@ -490,37 +523,42 @@ class HikvisionAlarmserver extends utils.Adapter {
 
         ctx.fileBase += `-${ctx.device}-${ctx.eventType}`;
 
-        // Set it true (event in progress)
+        // Set it true (event in progress)...
         this.log.debug('Triggering ' + ctx.stateId);
         await this.setStateChangedAsync(ctx.stateId, true, true);
-
-        // Set eventLogged so upon return any other parts are processed too
-        ctx.eventLogged = true;
-
-        // Successfully logged event so add this device to list of connected clients
-        this.clientConnected(ctx.device);
 
         // ... and restart to clear (set false)
         this.stateTimers[ctx.stateId] = this.setTimeout((stateId) => {
             this.setState(stateId, false, true);
             delete this.stateTimers[stateId];
         }, this.config.alarmTimeout, ctx.stateId);
+
+        // Set eventLogged so upon return any other parts are processed too
+        ctx.eventLogged = true;
+
+        await this.checkAndSendTo(this.sendXmlConfig, ctx);
+
+        // Successfully logged event so add this device to list of connected clients
+        this.clientConnected(ctx.device);
     }
 
     async getDeviceName(device) {
-        // Output is same as input by default
-        let output = device;
-
-        const devices = await this.getForeignObjectsAsync('net-tools.*.' + device, 'device');
-        if (Object.keys(devices).length == 1) {
-            // As expected, return the device name...
-            const device = devices[Object.keys(devices)[0]];
-            if (device && device.common && device.common.name) {
-                // ... which should always be here.
-                output = device.common.name;
+        // Populate cache if not already there
+        if (!this.deviceNameCache[device]) {
+            // Output is same as input by default
+            let output = device;
+            const devices = await this.getForeignObjectsAsync('net-tools.*.' + device, 'device');
+            if (Object.keys(devices).length == 1) {
+                // As expected, return the device name...
+                const device = devices[Object.keys(devices)[0]];
+                if (device && device.common && device.common.name) {
+                    // ... which should always be here.
+                    output = device.common.name;
+                }
             }
+            this.deviceNameCache[device] = output;
         }
-        return output;
+        return this.deviceNameCache[device];
     }
 
     async updateConnected() {

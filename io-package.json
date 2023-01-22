@@ -102,6 +102,9 @@
     "mode": "daemon",
     "type": "alarm",
     "compact": true,
+    "adminUI": {
+      "config": "json"
+    },
     "connectionType": "local",
     "dataSource": "push",
     "materialize": true,
@@ -120,11 +123,16 @@
     "saveImages": false,
     "annotateImages": true,
     "saveXml": false,
-    "sendToInstanceName": "",
-    "sendToCommand": "",
-    "sendToMessage": "",
-    "sendToThrottle": 0,
-    "sendToThrottleByDevice": true
+    "sendXmlInstance": "",
+    "sendXmlCommand": "",
+    "sendXmlMessage": "",
+    "sendXmlThrottle": 0,
+    "sendXmlThrottleByDevice": true,
+    "sendImageInstance": "",
+    "sendImageCommand": "",
+    "sendImageMessage": "",
+    "sendImageThrottle": 0,
+    "sendImageThrottleByDevice": true
   },
   "objects": [],
   "instanceObjects": [
