@@ -1,0 +1,187 @@
+{
+    "type": "tabs",
+    "items": {
+        "mainTab": {
+            "type": "panel",
+            "label": "Main settings",
+            "items": {
+                "port": {
+                    "type": "number",
+                    "min": 1,
+                    "max": 65565,
+                    "label": "Listen port",
+                    "sm": 6
+                },
+                "bind": {
+                    "type": "ip",
+                    "label": "Listen address",
+                    "sm": 6
+                },
+                "alarmTimeout": {
+                    "type": "number",
+                    "newLine": true,
+                    "min": 0,
+                    "label": "Alarm timeout (ms)",
+                    "help": "Time (in milliseconds) after no message reception that an alarm is cleared.",
+                    "sm": 6
+                }
+            }
+        },
+        "channelsTab": {
+            "type": "panel",
+            "label": "Channels",
+            "items": {
+                "useChannels": {
+                    "type": "checkbox",
+                    "label": "Create camera channels below devices",
+                    "help": "Can be useful for devices that have more than one sensor.",
+                    "sm": 12
+                },
+                "useDetectionTargets": {
+                    "type": "checkbox",
+                    "label": "Create camera detection target channels below devices",
+                    "help": "Can be useful for smart devices that classify motion targets (eg. 'human', 'vehicle', etc').",
+                    "sm": 12
+                }
+            }
+        },
+        "sendTab": {
+            "type": "panel",
+            "label": "Sending",
+            "items": {
+                "_description": {
+                    "type": "staticText",
+                    "text": "It is possible to use ioBroker's <i>sendTo</i> functionality to send event XML and/or images to to other adapters (eg. Telegram, email, pushsafer, etc)."
+                },
+                "_xmlHead": {
+                    "type": "header",
+                    "size": "2",
+                    "text": "XML event parts"
+                },
+                "sendXmlInstance": {
+                    "newLine": true,
+                    "type": "instance",
+                    "label": "Send to instance for XML",
+                    "sm": 12,
+                    "md": 6
+                },
+                "sendXmlCommand": {
+                    "newLine": true,
+                    "type": "text",
+                    "label": "Send to command for XML",
+                    "sm": 12,
+                    "md": 6,
+                    "hidden": "data.sendXmlInstance == ''"
+                },
+                "sendXmlMessage": {
+                    "type": "text",
+                    "trim": false,
+                    "label": "Send to message for XML",
+                    "help": "JS code to construct the message object to send.<br/>Eg. to send images to Telegram use, <i>`Received ${ctx.eventType} from ${ctx.deviceName}`</i>.<br/>Event details are available in the <i>ctx</i> variable (event context).",
+                    "sm": 12,
+                    "hidden": "data.sendXmlInstance == ''",
+                    "validator": "data.sendXMLInstance == '' || data.sendXmlMessage != ''",
+                    "validatorErrorText": "XML message text cannot be blank",
+                    "validatorNoSaveOnError": true
+                },
+                "sendXmlThrottle": {
+                    "type": "number",
+                    "min": 0,
+                    "label": "Send throttle for XML (ms)",
+                    "help": "Skip sending unless at least this time has elapsed since last message (time in milliseconds).<br/>Set to zero to disable.",
+                    "sm": 12,
+                    "hidden": "data.sendXmlInstance == ''"
+                },
+                "sendXmlThrottleByDevice": {
+                    "type": "checkbox",
+                    "label": "Throttle for XML is on a per-device basis",
+                    "help": "Uncheck to make minimum delay between sending a global condition (ie. irrespective of source device).",
+                    "sm": 12,
+                    "hidden": "data.sendXmlInstance == ''"
+                },
+                "_imageHead": {
+                    "type": "header",
+                    "size": "2",
+                    "text": "Image event parts"
+                },
+                "sendImageInstance": {
+                    "newLine": true,
+                    "type": "instance",
+                    "label": "Send to instance for images",
+                    "sm": 12,
+                    "md": 6
+                },
+                "sendImageCommand": {
+                    "newLine": true,
+                    "type": "text",
+                    "label": "Send to command for images",
+                    "sm": 12,
+                    "md": "6",
+                    "hidden": "data.sendImageInstance == ''"
+                },
+                "sendImageMessage": {
+                    "type": "text",
+                    "trim": false,
+                    "label": "Send to message for images",
+                    "help": "JS code to construct the message object to send.<br/>Eg. to send images to Telegram use, <i>{ text: imageBuffer, type: 'photo' }</i>.<br/> For available variables are <i>imageBuffer</i> and <i>ctx</i> (event context).",
+                    "sm": 12,
+                    "hidden": "data.sendImageInstance == ''",
+                    "validator": "data.sendImageInstance == '' || data.sendImageMessage != ''",
+                    "validatorErrorText": "Image message text cannot be blank",
+                    "validatorNoSaveOnError": true
+                },
+                "sendImageThrottle": {
+                    "type": "number",
+                    "min": 0,
+                    "label": "Send throttle for images (ms)",
+                    "help": "Skip sending unless at least this time has elapsed since last message (time in milliseconds).<br/>Set to zero to disable.",
+                    "sm": 12,
+                    "hidden": "data.sendImageInstance == ''"
+                },
+                "sendImageThrottleByDevice": {
+                    "type": "checkbox",
+                    "label": "Throttle for images is on a per-device basis",
+                    "help": "Uncheck to make minimum delay between sending a global condition (ie. irrespective of source device).",
+                    "sm": 12,
+                    "hidden": "data.sendImageInstance == ''"
+                }
+            }
+        },
+        "saveTab": {
+            "type": "panel",
+            "label": "Saving",
+            "items": {
+                "_description": {
+                    "type": "staticText",
+                    "text": "It is possible to save event XML and/or images (to the iobroker-data dirctory) for further processing/analysis/archiving/etc."
+                },
+                "saveXml": {
+                    "type": "checkbox",
+                    "label": "Save event XML",
+                    "sm": 12
+                },
+                "saveImages": {
+                    "type": "checkbox",
+                    "label": "Save event images",
+                    "sm": 12
+                }
+            }
+        },
+        "processingTab": {
+            "type": "panel",
+            "label": "Processing",
+            "items": {
+                "_description": {
+                    "type": "staticText",
+                    "text": "Perform the following processing on XML/images before saving and/or sending"
+                },
+                "annotateImages": {
+                    "type": "checkbox",
+                    "label": "Annotate images",
+                    "help": "Draws region box and label for detected target.",
+                    "sm": 12
+                }
+            }
+        }
+    }
+}
