@@ -55,7 +55,7 @@
                 },
                 "_xmlHead": {
                     "type": "header",
-                    "size": "2",
+                    "size": 2,
                     "text": "XML event parts"
                 },
                 "sendXmlInstance": {
@@ -101,7 +101,7 @@
                 },
                 "_imageHead": {
                     "type": "header",
-                    "size": "2",
+                    "size": 2,
                     "text": "Image event parts"
                 },
                 "sendImageInstance": {
@@ -116,7 +116,7 @@
                     "type": "text",
                     "label": "Send to command for images",
                     "sm": 12,
-                    "md": "6",
+                    "md": 6,
                     "hidden": "data.sendImageInstance == ''"
                 },
                 "sendImageMessage": {
