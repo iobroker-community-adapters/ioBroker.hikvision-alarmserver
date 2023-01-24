@@ -1,6 +1,6 @@
 {
   "name": "iobroker.hikvision-alarmserver",
-  "version": "0.0.7",
+  "version": "0.1.0",
   "description": "An adapter to receive alarms/events send from Hikvision cameras.",
   "author": {
     "name": "Robin Rainton",
