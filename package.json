@@ -24,7 +24,7 @@
     "canvas": "^2.11.2",
     "fs-extra": "*",
     "http": "*",
-    "@iobroker/adapter-core": "^2.6.8",
+    "@iobroker/adapter-core": "^3.0.3",
     "parse-multipart-data": "*",
     "xml2js": "*"
   },
