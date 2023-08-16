@@ -20,6 +20,9 @@
     "type": "git",
     "url": "https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver"
   },
+  "engines": {
+    "node": ">= 16"
+  },
   "dependencies": {
     "canvas": "^2.11.2",
     "fs-extra": "*",
