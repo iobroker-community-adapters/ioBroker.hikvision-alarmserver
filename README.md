@@ -134,7 +134,7 @@ Make sure to linkage in the events you would like to report to ioBroker includes
   Placeholder for the next version (at the beginning of the line):
   ### **WORK IN PROGRESS**
 -->
-### 1.1.0 (2024-04-22)
+### **WORK IN PROGRESS**
 * (mcm1957) Adapter requires node.js >= 18 and js-controller >= 5 now
 * (mcm1957) Dependencies have been updated
 
