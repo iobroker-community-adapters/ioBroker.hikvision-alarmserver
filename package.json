@@ -24,10 +24,10 @@
     "node": ">= 18"
   },
   "dependencies": {
+    "@iobroker/adapter-core": "^3.1.4",
     "canvas": "^2.11.2",
     "fs-extra": "*",
     "http": "*",
-    "@iobroker/adapter-core": "^3.1.4",
     "parse-multipart-data": "*",
     "xml2js": "*"
   },
