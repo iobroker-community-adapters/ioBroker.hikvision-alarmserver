@@ -68,7 +68,6 @@
         "zh-cn": "首次出版"
       }
     },
-    "title": "Hikvision Alarm Server",
     "titleLang": {
       "en": "Hikvision Alarm Server",
       "de": "Hikvision-Alarmserver",
@@ -104,7 +103,10 @@
       "alert",
       "security"
     ],
-    "license": "MIT",
+    "licenseInformation": {
+      "license": "MIT",
+      "type": "free"
+    },
     "platform": "Javascript/Node.js",
     "main": "main.js",
     "icon": "hikvision-alarmserver.png",
@@ -112,6 +114,7 @@
     "extIcon": "https://raw.githubusercontent.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/main/admin/hikvision-alarmserver.png",
     "readme": "https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/blob/main/README.md",
     "loglevel": "info",
+    "tier": 2,
     "mode": "daemon",
     "type": "alarm",
     "compact": true,
@@ -123,7 +126,12 @@
     "materialize": true,
     "dependencies": [
       {
-        "js-controller": ">=3.2.4"
+        "js-controller": ">=5.0.19"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=6.13.16"
       }
     ]
   },
