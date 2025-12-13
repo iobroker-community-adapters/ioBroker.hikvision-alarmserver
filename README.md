@@ -162,7 +162,7 @@ Make sure to linkage in the events you would like to report to ioBroker includes
 ## License
 MIT License
 
-Copyright (c) 2022-2024 Robin Rainton <robin@rainton.com>
+Copyright (c) 2022-2025 Robin Rainton <robin@rainton.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
