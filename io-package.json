@@ -108,7 +108,6 @@
       "type": "free"
     },
     "platform": "Javascript/Node.js",
-    "main": "main.js",
     "icon": "hikvision-alarmserver.png",
     "enabled": true,
     "extIcon": "https://raw.githubusercontent.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver/main/admin/hikvision-alarmserver.png",
