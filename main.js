@@ -13,7 +13,7 @@ const canvas = require('canvas');
 // The adapter-core module gives you access to the core ioBroker functions
 // you need to create an adapter
 const utils = require('@iobroker/adapter-core');
-const http = require('http');
+const http = require('node:http');
 
 const bodyMaxLogLength = 256;
 
@@ -25,7 +25,7 @@ const activeConnectionTimeout = 60 * 60 * 24 * 1000;
 // const parseStringPromise = require('xml2js').parseStringPromise;
 
 // TODO: Workaround for https://github.com/Leonidas-from-XIV/node-xml2js/issues/601
-const promisify = require('util').promisify;
+const promisify = require('node:util').promisify;
 const xml2js = require('xml2js');
 const parseStringPromise = promisify(xml2js.parseString);
 
