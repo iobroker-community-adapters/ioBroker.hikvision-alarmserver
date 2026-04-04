@@ -9,6 +9,7 @@
   "homepage": "https://github.com/iobroker-community-adapters/ioBroker.hikvision-alarmserver",
   "license": "MIT",
   "keywords": [
+    "ioBroker",
     "hikvision",
     "camera",
     "alarm",
