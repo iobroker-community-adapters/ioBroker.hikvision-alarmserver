@@ -162,6 +162,8 @@ Make sure to linkage in the events you would like to report to ioBroker includes
 ### 0.0.2
 -   (Robin Rainton) initial release.
 
+[Older changelogs can be found there](CHANGELOG_OLD.md)
+
 ## License
 MIT License
 
