@@ -281,7 +281,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                     parseFloat(xmlTargetRect.width[0]),
                     parseFloat(xmlTargetRect.height[0])
                 ];
-            } catch (err) {
+            } catch (_err) {
                 this.log.warn('Could not find target x/y/width/height');
             }
 
@@ -421,7 +421,7 @@ class HikvisionAlarmserver extends utils.Adapter {
             // TODO: make object names configurable? Mac? IP? etc.
             ctx.macAddress = ctx.xml.EventNotificationAlert.macAddress[0];
             ctx.eventType = ctx.xml.EventNotificationAlert.eventType[0];
-        } catch (err) {
+        } catch (_err) {
             this.log.error('Bad request - failed to find required XML attributes');
             // We cannot carry on...
             return;
@@ -429,19 +429,19 @@ class HikvisionAlarmserver extends utils.Adapter {
         // detection Target is optional
         try {
             ctx.detectionTarget = ctx.xml.EventNotificationAlert.DetectionRegionList[0].DetectionRegionEntry[0].detectionTarget[0];
-        } catch (err) {
+        } catch (_err) {
             this.log.debug('No detectionTarget found');
         }
         // Channel name is optional
         try {
             ctx.channelName = ctx.xml.EventNotificationAlert.channelName[0];
-        } catch (err) {
+        } catch (_err) {
             this.log.debug('No channelName found');
         }
         // Use XML timestamp if we can
         try {
             ctx.ts = new Date(Date.parse(ctx.xml.EventNotificationAlert.dateTime[0]));
-        } catch (err) {
+        } catch (_err) {
             this.log.debug('No dateTime found - using new Date()');
             ctx.ts = new Date();
         }

@@ -1,7 +1,10 @@
 // Specialized tsconfig for type-checking js files
 {
     "extends": "./tsconfig.json",
-    "compilerOptions": {},
+    "compilerOptions": {
+        "skipLibCheck": true,
+        "types": ["node", "mocha"]
+    },
     "include": [
         "**/*.js",
         "**/*.d.ts"

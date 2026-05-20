@@ -10,7 +10,7 @@
         "checkJs": true,
 
         "module": "commonjs",
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "esModuleInterop": true,
         // this is necessary for the automatic typing of the adapter config
         "resolveJsonModule": true,
@@ -26,8 +26,8 @@
         // "noUnusedParameters": true,
         "useUnknownInCatchVariables": false,
 
-        // Consider targetting es2019 or higher if you only support Node.js 12+
-        "target": "es2018",
+        // Node.js >= 22 supports ES2022 fully
+        "target": "es2022",
 
     },
     "include": [

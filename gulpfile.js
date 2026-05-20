@@ -56,7 +56,7 @@ function readWordJs(src) {
         const resultFunc = new Function('return ' + words + ';');
 
         return resultFunc();
-    } catch (e) {
+    } catch (_e) {
         return null;
     }
 }
