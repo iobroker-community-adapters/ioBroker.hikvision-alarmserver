@@ -65,7 +65,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                 messageFn: new Function('imageBuffer', 'ctx', `return ${this.config.sendXmlMessage};`),
                 throttle: this.config.sendXmlThrottle,
                 throttleByDevice: this.config.sendXmlThrottleByDevice
-            }
+            };
         } catch (err) {
             this.log.error('Failed to create sendXmlConfig - Send to message for XML is likely malformed: ' + err);
         }
@@ -77,9 +77,9 @@ class HikvisionAlarmserver extends utils.Adapter {
                 messageFn: new Function('imageBuffer', 'ctx', `return ${this.config.sendImageMessage};`),
                 throttle: this.config.sendImageThrottle,
                 throttleByDevice: this.config.sendImageThrottleByDevice
-            }
+            };
         } catch (err) {
-            this.log.error('Failed to create sendImageConfig - Send to message for images is likely malformed: ' + err);          
+            this.log.error('Failed to create sendImageConfig - Send to message for images is likely malformed: ' + err);
         }
 
         const that = this;
@@ -209,7 +209,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                     await this.handleXml(ctx, body);
                     break;
 
-                case 'multipart/form-data':
+                case 'multipart/form-data': {
                     const boundary = multipart.getBoundary(headers[contentTypeHeader]);
                     const parts = multipart.parse(body, boundary);
                     this.log.debug(`Found ${parts.length} parts`);
@@ -244,6 +244,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                     }
                     this.log.debug('Finished multipart: ' + JSON.stringify(ctx));
                     break;
+                }
 
                 default:
                     this.log.error('Unhandled content type: ' + contentType);
@@ -254,7 +255,7 @@ class HikvisionAlarmserver extends utils.Adapter {
 
     async handleJpegPart(ctx, part) {
         // Add .jpg to filename if not there
-        let fileParts = path.parse(part.filename);
+        const fileParts = path.parse(part.filename);
         if (fileParts.ext == '') {
             fileParts.ext = '.jpg';
         } else if (fileParts.ext != '.jpg' && fileParts.ext != '.jpeg') {
@@ -311,7 +312,7 @@ class HikvisionAlarmserver extends utils.Adapter {
                 const lableTextRatio = 48;
 
                 const imgOut = canvas.createCanvas(imgIn.width, imgIn.height);
-                const context2d = imgOut.getContext('2d')
+                const context2d = imgOut.getContext('2d');
                 context2d.drawImage(imgIn, 0, 0);
                 context2d.strokeStyle = labelLineStyle;
                 context2d.lineWidth = labelPadding * 2;
@@ -504,7 +505,18 @@ class HikvisionAlarmserver extends utils.Adapter {
 
             if (channelName != null) {
                 this.log.debug('Creating channel ' + channelName);
-                await this.createChannelAsync(ctx.device, channelName);
+                // createChannelAsync is deprecated; create all channel hierarchy levels explicitly
+                const channelParts = channelName.split('.');
+                for (let i = 0; i < channelParts.length; i++) {
+                    const partialId = `${ctx.device}.${channelParts.slice(0, i + 1).join('.')}`;
+                    await this.setObjectNotExistsAsync(partialId, {
+                        type: 'channel',
+                        common: {
+                            name: channelParts[i]
+                        },
+                        native: {}
+                    });
+                }
             }
 
             this.log.debug('Creating state ' + ctx.stateId);
