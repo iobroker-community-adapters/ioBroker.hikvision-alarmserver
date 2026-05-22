@@ -1,74 +1,76 @@
 {
     "type": "tabs",
+    "i18n": true,
     "items": {
         "mainTab": {
             "type": "panel",
-            "label": "Main settings",
+            "label": "mainSettings",
             "items": {
                 "port": {
                     "type": "number",
                     "min": 1,
                     "max": 65565,
-                    "label": "Listen port",
+                    "label": "listenPort",
                     "sm": 6
                 },
                 "bind": {
                     "type": "ip",
-                    "label": "Listen address",
+                    "label": "listenAddress",
                     "sm": 6
                 },
                 "alarmTimeout": {
                     "type": "number",
                     "newLine": true,
                     "min": 0,
-                    "label": "Alarm timeout (ms)",
-                    "help": "Time (in milliseconds) after no message reception that an alarm is cleared.",
+                    "label": "alarmTimeout",
+                    "help": "alarmTimeoutHelp",
                     "sm": 6
                 }
             }
         },
         "channelsTab": {
             "type": "panel",
-            "label": "Channels",
+            "label": "channels",
             "items": {
                 "useChannels": {
                     "type": "checkbox",
-                    "label": "Create camera channels below devices",
-                    "help": "Can be useful for devices that have more than one sensor.",
+                    "label": "useChannels",
+                    "help": "useChannelsHelp",
                     "sm": 12
                 },
                 "useDetectionTargets": {
                     "type": "checkbox",
-                    "label": "Create camera detection target channels below devices",
-                    "help": "Can be useful for smart devices that classify motion targets (eg. 'human', 'vehicle', etc').",
+                    "label": "useDetectionTargets",
+                    "help": "useDetectionTargetsHelp",
                     "sm": 12
                 }
             }
         },
         "sendTab": {
             "type": "panel",
-            "label": "Sending",
+            "label": "sending",
             "items": {
                 "_description": {
                     "type": "staticText",
-                    "text": "It is possible to use ioBroker's <i>sendTo</i> functionality to send event XML and/or images to to other adapters (eg. Telegram, email, pushsafer, etc)."
+                    "text": "sendingDescription",
+                    "format": "html"
                 },
                 "_xmlHead": {
                     "type": "header",
                     "size": 2,
-                    "text": "XML event parts"
+                    "text": "xmlEventParts"
                 },
                 "sendXmlInstance": {
                     "newLine": true,
                     "type": "instance",
-                    "label": "Send to instance for XML",
+                    "label": "sendXmlInstance",
                     "sm": 12,
                     "md": 6
                 },
                 "sendXmlCommand": {
                     "newLine": true,
                     "type": "text",
-                    "label": "Send to command for XML",
+                    "label": "sendXmlCommand",
                     "sm": 12,
                     "md": 6,
                     "hidden": "data.sendXmlInstance == ''"
@@ -76,45 +78,45 @@
                 "sendXmlMessage": {
                     "type": "text",
                     "trim": false,
-                    "label": "Send to message for XML",
-                    "help": "JS code to construct the message object to send.<br/>Eg. to send a simple text message to Telegram use, <i>`Received ${ctx.eventType} from ${ctx.deviceName}`</i>.<br/>Event details are available in the <i>ctx</i> variable (event context).",
+                    "label": "sendXmlMessage",
+                    "help": "sendXmlMessageHelp",
                     "sm": 12,
                     "hidden": "data.sendXmlInstance == ''",
-                    "validator": "data.sendXMLInstance == '' || data.sendXmlMessage != ''",
-                    "validatorErrorText": "XML message text cannot be blank",
+                    "validator": "data.sendXmlInstance == '' || data.sendXmlMessage != ''",
+                    "validatorErrorText": "sendXmlMessageRequired",
                     "validatorNoSaveOnError": true
                 },
                 "sendXmlThrottle": {
                     "type": "number",
                     "min": 0,
-                    "label": "Send throttle for XML (ms)",
-                    "help": "Skip sending unless at least this time has elapsed since last message (time in milliseconds).<br/>Set to zero to disable.",
+                    "label": "sendXmlThrottle",
+                    "help": "sendThrottleHelp",
                     "sm": 12,
                     "hidden": "data.sendXmlInstance == ''"
                 },
                 "sendXmlThrottleByDevice": {
                     "type": "checkbox",
-                    "label": "Throttle for XML is on a per-device basis",
-                    "help": "Uncheck to make minimum delay between sending a global condition (ie. irrespective of source device).",
+                    "label": "sendXmlThrottleByDevice",
+                    "help": "sendThrottleByDeviceHelp",
                     "sm": 12,
                     "hidden": "data.sendXmlInstance == ''"
                 },
                 "_imageHead": {
                     "type": "header",
                     "size": 2,
-                    "text": "Image event parts"
+                    "text": "imageEventParts"
                 },
                 "sendImageInstance": {
                     "newLine": true,
                     "type": "instance",
-                    "label": "Send to instance for images",
+                    "label": "sendImageInstance",
                     "sm": 12,
                     "md": 6
                 },
                 "sendImageCommand": {
                     "newLine": true,
                     "type": "text",
-                    "label": "Send to command for images",
+                    "label": "sendImageCommand",
                     "sm": 12,
                     "md": 6,
                     "hidden": "data.sendImageInstance == ''"
@@ -122,26 +124,26 @@
                 "sendImageMessage": {
                     "type": "text",
                     "trim": false,
-                    "label": "Send to message for images",
-                    "help": "JS code to construct the message object to send.<br/>Eg. to send images to Telegram use, <i>{ text: imageBuffer, type: 'photo' }</i>.<br/> For available variables are <i>imageBuffer</i> and <i>ctx</i> (event context).",
+                    "label": "sendImageMessage",
+                    "help": "sendImageMessageHelp",
                     "sm": 12,
                     "hidden": "data.sendImageInstance == ''",
                     "validator": "data.sendImageInstance == '' || data.sendImageMessage != ''",
-                    "validatorErrorText": "Image message text cannot be blank",
+                    "validatorErrorText": "sendImageMessageRequired",
                     "validatorNoSaveOnError": true
                 },
                 "sendImageThrottle": {
                     "type": "number",
                     "min": 0,
-                    "label": "Send throttle for images (ms)",
-                    "help": "Skip sending unless at least this time has elapsed since last message (time in milliseconds).<br/>Set to zero to disable.",
+                    "label": "sendImageThrottle",
+                    "help": "sendThrottleHelp",
                     "sm": 12,
                     "hidden": "data.sendImageInstance == ''"
                 },
                 "sendImageThrottleByDevice": {
                     "type": "checkbox",
-                    "label": "Throttle for images is on a per-device basis",
-                    "help": "Uncheck to make minimum delay between sending a global condition (ie. irrespective of source device).",
+                    "label": "sendImageThrottleByDevice",
+                    "help": "sendThrottleByDeviceHelp",
                     "sm": 12,
                     "hidden": "data.sendImageInstance == ''"
                 }
@@ -149,36 +151,36 @@
         },
         "saveTab": {
             "type": "panel",
-            "label": "Saving",
+            "label": "saving",
             "items": {
                 "_description": {
                     "type": "staticText",
-                    "text": "It is possible to save event XML and/or images (to the iobroker-data dirctory) for further processing/analysis/archiving/etc."
+                    "text": "savingDescription"
                 },
                 "saveXml": {
                     "type": "checkbox",
-                    "label": "Save event XML",
+                    "label": "saveXml",
                     "sm": 12
                 },
                 "saveImages": {
                     "type": "checkbox",
-                    "label": "Save event images",
+                    "label": "saveImages",
                     "sm": 12
                 }
             }
         },
         "processingTab": {
             "type": "panel",
-            "label": "Processing",
+            "label": "processing",
             "items": {
                 "_description": {
                     "type": "staticText",
-                    "text": "Perform the following processing on XML/images before saving and/or sending"
+                    "text": "processingDescription"
                 },
                 "annotateImages": {
                     "type": "checkbox",
-                    "label": "Annotate images",
-                    "help": "Draws region box and label for detected target.",
+                    "label": "annotateImages",
+                    "help": "annotateImagesHelp",
                     "sm": 12
                 }
             }
