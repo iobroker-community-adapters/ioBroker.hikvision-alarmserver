@@ -1,6 +1,7 @@
 {
     "type": "tabs",
     "i18n": true,
+    "tabsStyle": {"width": "calc(100% - 100px)"},
     "items": {
         "mainTab": {
             "type": "panel",
@@ -11,12 +12,20 @@
                     "min": 1,
                     "max": 65565,
                     "label": "listenPort",
-                    "sm": 6
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 3,
+                    "xl": 3
                 },
                 "bind": {
                     "type": "ip",
                     "label": "listenAddress",
-                    "sm": 6
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 4,
+                    "lg": 3,
+                    "xl": 3
                 },
                 "alarmTimeout": {
                     "type": "number",
@@ -24,7 +33,11 @@
                     "min": 0,
                     "label": "alarmTimeout",
                     "help": "alarmTimeoutHelp",
-                    "sm": 6
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4
                 }
             }
         },
@@ -36,13 +49,21 @@
                     "type": "checkbox",
                     "label": "useChannels",
                     "help": "useChannelsHelp",
-                    "sm": 12
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
                 },
                 "useDetectionTargets": {
                     "type": "checkbox",
                     "label": "useDetectionTargets",
                     "help": "useDetectionTargetsHelp",
-                    "sm": 12
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
                 }
             }
         },
@@ -64,15 +85,21 @@
                     "newLine": true,
                     "type": "instance",
                     "label": "sendXmlInstance",
+                    "xs": 12,
                     "sm": 12,
-                    "md": 6
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4
                 },
                 "sendXmlCommand": {
                     "newLine": true,
                     "type": "text",
                     "label": "sendXmlCommand",
+                    "xs": 12,
                     "sm": 12,
                     "md": 6,
+                    "lg": 4,
+                    "xl": 4,
                     "hidden": "data.sendXmlInstance == ''"
                 },
                 "sendXmlMessage": {
@@ -80,7 +107,11 @@
                     "trim": false,
                     "label": "sendXmlMessage",
                     "help": "sendXmlMessageHelp",
+                    "xs": 12,
                     "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12,
                     "hidden": "data.sendXmlInstance == ''",
                     "validator": "data.sendXmlInstance == '' || data.sendXmlMessage != ''",
                     "validatorErrorText": "sendXmlMessageRequired",
@@ -91,14 +122,22 @@
                     "min": 0,
                     "label": "sendXmlThrottle",
                     "help": "sendThrottleHelp",
+                    "xs": 12,
                     "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4,
                     "hidden": "data.sendXmlInstance == ''"
                 },
                 "sendXmlThrottleByDevice": {
                     "type": "checkbox",
                     "label": "sendXmlThrottleByDevice",
                     "help": "sendThrottleByDeviceHelp",
+                    "xs": 12,
                     "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12,
                     "hidden": "data.sendXmlInstance == ''"
                 },
                 "_imageHead": {
@@ -110,15 +149,21 @@
                     "newLine": true,
                     "type": "instance",
                     "label": "sendImageInstance",
+                    "xs": 12,
                     "sm": 12,
-                    "md": 6
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4
                 },
                 "sendImageCommand": {
                     "newLine": true,
                     "type": "text",
                     "label": "sendImageCommand",
+                    "xs": 12,
                     "sm": 12,
                     "md": 6,
+                    "lg": 4,
+                    "xl": 4,
                     "hidden": "data.sendImageInstance == ''"
                 },
                 "sendImageMessage": {
@@ -126,7 +171,11 @@
                     "trim": false,
                     "label": "sendImageMessage",
                     "help": "sendImageMessageHelp",
+                    "xs": 12,
                     "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12,
                     "hidden": "data.sendImageInstance == ''",
                     "validator": "data.sendImageInstance == '' || data.sendImageMessage != ''",
                     "validatorErrorText": "sendImageMessageRequired",
@@ -137,14 +186,22 @@
                     "min": 0,
                     "label": "sendImageThrottle",
                     "help": "sendThrottleHelp",
+                    "xs": 12,
                     "sm": 12,
+                    "md": 6,
+                    "lg": 4,
+                    "xl": 4,
                     "hidden": "data.sendImageInstance == ''"
                 },
                 "sendImageThrottleByDevice": {
                     "type": "checkbox",
                     "label": "sendImageThrottleByDevice",
                     "help": "sendThrottleByDeviceHelp",
+                    "xs": 12,
                     "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12,
                     "hidden": "data.sendImageInstance == ''"
                 }
             }
@@ -160,12 +217,20 @@
                 "saveXml": {
                     "type": "checkbox",
                     "label": "saveXml",
-                    "sm": 12
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
                 },
                 "saveImages": {
                     "type": "checkbox",
                     "label": "saveImages",
-                    "sm": 12
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
                 }
             }
         },
@@ -181,7 +246,11 @@
                     "type": "checkbox",
                     "label": "annotateImages",
                     "help": "annotateImagesHelp",
-                    "sm": 12
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
                 }
             }
         }
