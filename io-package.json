@@ -123,7 +123,6 @@
     },
     "connectionType": "local",
     "dataSource": "push",
-    "materialize": true,
     "dependencies": [
       {
         "js-controller": ">=6.0.11"
